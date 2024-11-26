@@ -28,7 +28,7 @@ class BlazarTempestPlugin(plugins.TempestPlugin):
 
     def get_opt_lists(self):
         return [
-            ("service_available", blazar_config.blazar_service_option),
+            ("service_available", [blazar_config.blazar_service_option]),
             (blazar_config.reservation_group.name, blazar_config.ReservationGroup),
             (
                 blazar_config.reservation_features_group.name,
