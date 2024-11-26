@@ -9,4 +9,11 @@ dependencies = [
 ]
 
 [project.entry-points."tempest.test_plugins"]
-blazar_tests = "blazar_tempest_plugin.plugin:BlazarTempestPlugin"
+blazar_tempest_plugin = "blazar_tempest_plugin.plugin:BlazarTempestPlugin"
+
+
+[project.optional-dependencies]
+dev = [
+    "tox",
+    "oslotest"
+]

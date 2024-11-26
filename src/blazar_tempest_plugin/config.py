@@ -1,26 +1,30 @@
 from oslo_config import cfg
 
-service_option = [
-    cfg.BoolOpt(
-        "blazar", default=True, help="Whether or not blazar is expected to be available"
-    ),
-]
-
-resource_reservation_group = cfg.OptGroup(
-    name="resource_reservation", title="Resource reservation service options"
+blazar_service_option = cfg.BoolOpt(
+    "blazar", default=True, help="Whether or not blazar is expected to be available"
 )
 
-ResourceReservationGroup = [
+
+reservation_group = cfg.OptGroup(
+    name="reservation", title="Resource reservation service options"
+)
+
+reservation_features_group = cfg.OptGroup(
+    name="reservation_feature_enabled",
+    title="Enabled features for resource reservation",
+)
+
+ReservationGroup = [
+    cfg.StrOpt(
+        "catalog_type",
+        default="reservation",
+        help="Catalog type of the reservation service",
+    ),
     cfg.StrOpt(
         "endpoint_type",
         default="publicURL",
         choices=["public", "admin", "internal", "publicURL", "adminURL", "internalURL"],
-        help="The endpoint type to use for the resource_reservation service.",
-    ),
-    cfg.BoolOpt(
-        "flavor_instance_plugin",
-        default=True,
-        help="Whether to test flavor-based instance reservation",
+        help="The endpoint type to use for the reservation service.",
     ),
     cfg.IntOpt(
         "lease_interval",
@@ -31,5 +35,33 @@ ResourceReservationGroup = [
         "lease_end_timeout",
         default=300,
         help="Timeout in seconds to wait for a lease to finish.",
+    ),
+]
+
+ReservationFeaturesGroup = [
+    cfg.BoolOpt(
+        "flavor_instance_plugin",
+        default=True,
+        help="Whether to test flavor-based instance reservation",
+    ),
+    cfg.BoolOpt(
+        "floatingip_plugin",
+        default=True,
+        help="Whether to test floatingip reservation",
+    ),
+    cfg.BoolOpt(
+        "network_plugin",
+        default=True,
+        help="Whether to test network reservation",
+    ),
+    cfg.BoolOpt(
+        "network_storage_plugin",
+        default=True,
+        help="Whether to test network_storage reservation",
+    ),
+    cfg.BoolOpt(
+        "device_plugin",
+        default=True,
+        help="Whether to test device reservation",
     ),
 ]
