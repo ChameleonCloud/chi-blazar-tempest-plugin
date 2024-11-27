@@ -48,8 +48,8 @@ class ReservationClient(rest_client.RestClient):
 
     def delete_lease(self, lease_id):
         resp, body = self.delete(self.lease_path % str(lease_id))
-        self.expected_success(http_client.NO_CONTENT, resp.status)
-        return self._response_helper(resp, body)
+        self.expected_success([http_client.OK, http_client.NO_CONTENT], resp.status)
+        return resp, self.deserialize(body)
 
     def list_host(self):
         resp, body = self.get(self.host)
