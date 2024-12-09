@@ -22,3 +22,22 @@ class TestNetworks(ReservationAPITest):
 
     # def test_delete_network(self):
     #     raise NotImplemented
+
+
+class TestNetworkAllocations(ReservationAPITest):
+    def test_list_network_allocations(self):
+        allocations = self.reservation_client.list_network_allocation()
+
+    def test_show_network_allocations(self):
+        allocation = self.reservation_client.get_network_allocation(
+            "6ecbff11-dc50-4794-b1e9-9bb09a462d5f"
+        )
+
+    # def test_create_network_allocation(self):
+    #     raise NotImplemented
+
+    # def test_update_network_allocation(self):
+    #     raise NotImplemented
+
+    # def test_delete_network_allocation(self):
+    #     raise NotImplemented

@@ -16,6 +16,9 @@ class ReservationClient(rest_client.RestClient):
     network = "/networks"
     network_path = "/networks/%s"
 
+    network_allocation = "/networks/allocations"
+    network_allocation_path = "/networks/%s/allocation"
+
     def __init__(self, auth_provider, service, region, **kwargs):
         super().__init__(auth_provider, service, region, **kwargs)
 
@@ -108,5 +111,38 @@ class ReservationClient(rest_client.RestClient):
 
     def delete_network(self, network_id):
         resp, body = self.delete(self.network_path % str(network_id))
+        self.expected_success(http_client.NO_CONTENT, resp.status)
+        return self._response_helper(resp, body)
+
+    def list_network_allocation(self):
+        resp, body = self.get(self.network_allocation)
+        self.expected_success(http_client.OK, resp.status)
+        return resp, self.deserialize(body)
+
+    def get_network_allocation(self, network_allocation_id):
+        resp, body = self.get(self.network_allocation_path % str(network_allocation_id))
+        self.expected_success(http_client.OK, resp.status)
+        return resp, self.deserialize(body)
+
+    def create_network_allocation(self, body):
+        body = json.dump_as_bytes(body)
+        resp, body = self.post(self.network_allocation, body=body)
+        self.expected_success(http_client.CREATED, resp.status)
+        return resp, self.deserialize(body)
+
+    def update_network_allocation(self, network_allocation_id, body):
+        body = json.dump_as_bytes(body)
+        resp, body = self.put(
+            self.network_allocation_path % str(network_allocation_id), body=body
+        )
+        self.expected_success(
+            [http_client.ACCEPTED, http_client.NO_CONTENT], resp.status
+        )
+        return resp, self.deserialize(body)
+
+    def delete_network_allocation(self, network_allocation_id):
+        resp, body = self.delete(
+            self.network_allocation_path % str(network_allocation_id)
+        )
         self.expected_success(http_client.NO_CONTENT, resp.status)
         return self._response_helper(resp, body)
