@@ -13,6 +13,8 @@ class ReservationClient(rest_client.RestClient):
     lease_path = "/leases/%s"
     host = "/os-hosts"
     host_path = "/os-hosts/%s"
+    network = "/networks"
+    network_path = "/networks/%s"
 
     def __init__(self, auth_provider, service, region, **kwargs):
         super().__init__(auth_provider, service, region, **kwargs)
@@ -77,5 +79,34 @@ class ReservationClient(rest_client.RestClient):
 
     def delete_host(self, host_id):
         resp, body = self.delete(self.host_path % str(host_id))
+        self.expected_success(http_client.NO_CONTENT, resp.status)
+        return self._response_helper(resp, body)
+
+    def list_network(self):
+        resp, body = self.get(self.network)
+        self.expected_success(http_client.OK, resp.status)
+        return resp, self.deserialize(body)
+
+    def get_network(self, network_id):
+        resp, body = self.get(self.network_path % str(network_id))
+        self.expected_success(http_client.OK, resp.status)
+        return resp, self.deserialize(body)
+
+    def create_network(self, body):
+        body = json.dump_as_bytes(body)
+        resp, body = self.post(self.network, body=body)
+        self.expected_success(http_client.CREATED, resp.status)
+        return resp, self.deserialize(body)
+
+    def update_network(self, network_id, body):
+        body = json.dump_as_bytes(body)
+        resp, body = self.put(self.network_path % str(network_id), body=body)
+        self.expected_success(
+            [http_client.ACCEPTED, http_client.NO_CONTENT], resp.status
+        )
+        return resp, self.deserialize(body)
+
+    def delete_network(self, network_id):
+        resp, body = self.delete(self.network_path % str(network_id))
         self.expected_success(http_client.NO_CONTENT, resp.status)
         return self._response_helper(resp, body)
