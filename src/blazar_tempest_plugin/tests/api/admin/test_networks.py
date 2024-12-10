@@ -1,9 +1,9 @@
 from tempest.lib.exceptions import NotImplemented
 
-from blazar_tempest_plugin.tests.base import ReservationAPITest
+from blazar_tempest_plugin.tests.base import ReservationTestCase
 
 
-class TestNetworks(ReservationAPITest):
+class TestNetworks(ReservationTestCase):
     """Basic CRUD ops for reservable networks API."""
 
     def test_list_networks(self):
@@ -24,7 +24,7 @@ class TestNetworks(ReservationAPITest):
     #     raise NotImplemented
 
 
-class TestNetworkAllocations(ReservationAPITest):
+class TestNetworkAllocations(ReservationTestCase):
     def test_list_network_allocations(self):
         allocations = self.reservation_client.list_network_allocation()
 

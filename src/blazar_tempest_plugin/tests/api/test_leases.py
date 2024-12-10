@@ -4,12 +4,12 @@ from oslo_log import log as logging
 from tempest.lib import decorators
 from tempest.lib.exceptions import NotFound, NotImplemented
 
-from blazar_tempest_plugin.tests.base import ReservationAPITest
+from blazar_tempest_plugin.tests.base import ReservationTestCase
 
 LOG = logging.getLogger(__name__)
 
 
-class TestLeases(ReservationAPITest):
+class TestLeases(ReservationTestCase):
     """Basic CRUD ops for lease API."""
 
     @decorators.idempotent_id("4df952e5-0a4e-402a-a2f2-502e34be72a4")
@@ -44,7 +44,7 @@ class TestLeases(ReservationAPITest):
         resp, body = self.reservation_client.delete_lease(lease_id)
 
 
-class TestReservableNetwork(ReservationAPITest):
+class TestReservableNetwork(ReservationTestCase):
     """Test reserving a network and using it."""
 
     credentials = ["primary"]

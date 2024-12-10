@@ -5,13 +5,13 @@ from tempest import config
 from tempest.lib import exceptions as lib_exc
 from tempest.scenario import manager
 
-from blazar_tempest_plugin.tests.base import ReservationTestMixin
+from blazar_tempest_plugin.tests.base import ReservationTestCase
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
-class ReservationScenarioTest(ReservationTestMixin, manager.NetworkScenarioTest):
+class ReservationScenarioTest(ReservationTestCase, manager.NetworkScenarioTest):
     """Base class for scenario tests focused on reservable resources."""
 
     def setUp(self):
