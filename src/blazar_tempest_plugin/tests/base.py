@@ -1,4 +1,5 @@
 import datetime
+import time
 
 from oslo_log import log as logging
 from tempest import config, test
@@ -13,7 +14,7 @@ class LeaseErrorException(exceptions.TempestException):
     message = "Lease %(lease_id)s failed to start and is in ERROR status"
 
 
-class ReservationAPITest(test.BaseTestCase):
+class ReservationTestCase(test.BaseTestCase):
     """Base class for scenario tests focused on reservable resources."""
 
     credentials = ["primary"]
@@ -29,7 +30,8 @@ class ReservationAPITest(test.BaseTestCase):
         super().setup_clients()
         cls.reservation_client = cls.os_primary.reservation.ReservationClient()
 
-    def create_lease(self, body: dict = {}):
+    @classmethod
+    def create_lease(cls, body: dict = {}):
         """Wrapper around blazar.create_lease with sane defaults."""
 
         # Generate a unique lease name for potential debugging
@@ -37,7 +39,7 @@ class ReservationAPITest(test.BaseTestCase):
             "name",
             data_utils.rand_name(
                 prefix=CONF.resource_name_prefix,
-                name=self.__class__.__name__ + "-lease",
+                name=cls.__name__ + "-lease",
             ),
         )
 
@@ -46,21 +48,22 @@ class ReservationAPITest(test.BaseTestCase):
         body.setdefault("end_date", "2050-12-27 12:00")
 
         # actually create the lease, ignoring the request status code
-        _, resp_body = self.reservation_client.create_lease(body)
+        _, resp_body = cls.reservation_client.create_lease(body)
 
         lease = resp_body["lease"]
 
         # automatically clean the lease up, and don't fail if we happen to clean it up earlier
-        self.addClassResourceCleanup(
+        cls.addClassResourceCleanup(
             test_utils.call_and_ignore_notfound_exc,
-            self.reservation_client.delete_lease,
+            cls.reservation_client.delete_lease,
             lease["id"],
         )
 
         # return the lease as a dict
         return lease
 
-    def get_lease_args_from_duraton(self, hours):
+    @classmethod
+    def get_lease_args_from_duration(cls, hours):
         """Generate arguments for blazar lease create.
 
         returns a dict containing:
@@ -75,12 +78,32 @@ class ReservationAPITest(test.BaseTestCase):
             "end_date": end_time.strftime("%Y-%m-%d %H:%M"),
         }
 
-    def get_lease_now(self, hours, reservations):
+    @classmethod
+    def get_lease_now(cls, hours, reservations):
         """Create a lease starting now, lasting for for #hours, for reservations in the reservations array."""
 
         # get start and end dates for the lease, will be passed as kwargs
-        lease_body = self.get_lease_args_from_duraton(hours=hours)
+        lease_body = cls.get_lease_args_from_duration(hours=hours)
         lease_body["reservations"] = reservations
 
-        lease = self.create_lease(lease_body)
+        lease = cls.create_lease(lease_body)
         return lease
+
+    @classmethod
+    def wait_for_lease_status(cls, lease_id, status):
+        if isinstance(status, str):
+            terminal_status = [status]
+        else:
+            terminal_status = status
+
+        start = int(time.time())
+        while int(time.time()) - start < cls.reservation_client.build_timeout:
+            _, lease_body = cls.reservation_client.get_lease(lease_id)
+            lease = lease_body["lease"]
+            current_status = lease["status"]
+            if current_status in terminal_status:
+                return lease
+            if current_status in ["ERROR"]:
+                raise LeaseErrorException(lease_id)
+
+            time.sleep(cls.reservation_client.build_interval)

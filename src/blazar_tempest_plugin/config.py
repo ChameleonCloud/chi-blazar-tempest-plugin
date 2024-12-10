@@ -36,6 +36,10 @@ ReservationGroup = [
         default=300,
         help="Timeout in seconds to wait for a lease to finish.",
     ),
+    cfg.StrOpt(
+        "reservable_flavor_ref",
+        help="flavor to use for reservable instances",
+    ),
 ]
 
 ReservationFeaturesGroup = [
