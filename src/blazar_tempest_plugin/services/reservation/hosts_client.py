@@ -29,6 +29,9 @@ class ReservableHostsClient(base.BaseReservableResourceClient):
     def update_host(self):
         raise lib_exc.NotImplemented
 
+    def reallocate_host(self):
+        raise lib_exc.NotImplemented
+
     def list_host_allocations(self):
         return self.list_resources(self.host_allocations_uri)
 

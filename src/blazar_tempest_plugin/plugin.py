@@ -46,8 +46,11 @@ class BlazarTempestPlugin(plugins.TempestPlugin):
             "service_version": "reservation.v1",
             "module_path": "blazar_tempest_plugin.services.reservation",
             "client_names": [
+                "LeasesClient",
                 "ReservableHostsClient",
                 "ReservableNetworksClient",
+                "ReservableFloatingIPsClient",
+                "ReservableDevicesClient",
             ],
         }
         reservation_client.update(reservation_config)
