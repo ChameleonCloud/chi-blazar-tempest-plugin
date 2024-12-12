@@ -24,6 +24,7 @@ class TestReservationHostsApi(ReservationApiTest):
 
     def test_list_hosts(self):
         hosts = self.client.list_hosts()
+        self.assertIn("hosts", hosts)
 
     def test_show_host(self):
         """We can't create a host without admin api, so can't guarantee this test."""
@@ -63,7 +64,7 @@ class TestReservationHostsApi(ReservationApiTest):
         # does NOT equal hypervisor_hostname
         self.assertEquals(found_host["id"], host_alloc["resource_id"])
 
-    def test_list_host_properties_default(self):
+    def test_list_host_properties(self):
         properties = self.client.list_host_properties()
         self.assertIn("resource_properties", properties)
         resource_properties = properties["resource_properties"]
@@ -73,7 +74,6 @@ class TestReservationHostsApi(ReservationApiTest):
             self.assertNotIn("values", p)
             self.assertNotIn("is_unique", p)
 
-    def test_list_host_properties_detail(self):
         properties = self.client.list_host_properties(detail=True)
         self.assertIn("resource_properties", properties)
         resource_properties = properties["resource_properties"]
@@ -83,7 +83,6 @@ class TestReservationHostsApi(ReservationApiTest):
             self.assertIn("values", p)
             self.assertIn("is_unique", p)
 
-    def test_list_host_properties_all(self):
         properties = self.client.list_host_properties(all=True)
         self.assertIn("resource_properties", properties)
         resource_properties = properties["resource_properties"]
