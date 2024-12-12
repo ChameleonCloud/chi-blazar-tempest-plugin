@@ -3,14 +3,14 @@ import time
 
 from oslo_log import log as logging
 from tempest import config, test
-from tempest.lib import exceptions
+from tempest.lib import exceptions as lib_exc
 from tempest.lib.common.utils import data_utils, test_utils
 
 LOG = logging.getLogger(__name__)
 CONF = config.CONF
 
 
-class LeaseErrorException(exceptions.TempestException):
+class LeaseErrorException(lib_exc.TempestException):
     message = "Lease %(lease_id)s failed to start and is in ERROR status"
 
 
@@ -26,6 +26,11 @@ class ReservationTestCase(test.BaseTestCase):
             raise cls.skipException("blazar is not enabled.")
 
     @classmethod
+    def setup_credentials(cls):
+        cls.set_network_resources()
+        super().setup_credentials()
+
+    @classmethod
     def setup_clients(cls):
         super().setup_clients()
         cls.reservation_client = cls.os_primary.reservation.ReservationClient()
@@ -35,13 +40,7 @@ class ReservationTestCase(test.BaseTestCase):
         """Wrapper around blazar.create_lease with sane defaults."""
 
         # Generate a unique lease name for potential debugging
-        body.setdefault(
-            "name",
-            data_utils.rand_name(
-                prefix=CONF.resource_name_prefix,
-                name=cls.__name__ + "-lease",
-            ),
-        )
+        body.setdefault("name", cls._get_name_prefix("-lease"))
 
         # set start and end date well in the future, to avoid any possible conflicts
         body.setdefault("start_date", "2050-12-26 12:00")
@@ -61,6 +60,32 @@ class ReservationTestCase(test.BaseTestCase):
 
         # return the lease as a dict
         return lease
+
+    @classmethod
+    def _get_name_prefix(cls, prefix):
+        return data_utils.rand_name(
+            prefix=CONF.resource_name_prefix,
+            name=cls.__name__ + prefix,
+        )
+
+    @classmethod
+    def _get_blazar_time_offset(cls, **kwargs):
+        """Get timestamp with offset from `now` and format for blazar api."""
+
+        time_now = datetime.datetime.now(datetime.timezone.utc)
+        time_offset = time_now + datetime.timedelta(**kwargs)
+
+        return time_offset.strftime("%Y-%m-%d %H:%M")
+
+    def _blazar_time_req_from_output(cls, iso8601_timestring):
+        """Convert openstack standard datetime string to blazar request format."""
+        result = datetime.datetime.fromisoformat(iso8601_timestring)
+        output_string = result.strftime("%Y-%m-%d %H:%M")
+        return output_string
+
+    def _blazar_time_req_to_iso8601(cls, date_string):
+        parsed_datetime = datetime.datetime.strptime(date_string, "%Y-%m-%d %H:%M")
+        return parsed_datetime.isoformat(timespec="microseconds")
 
     @classmethod
     def get_lease_args_from_duration(cls, hours):

@@ -2,7 +2,9 @@ import time
 
 from oslo_log import log as logging
 from tempest import config
+from tempest.common import waiters
 from tempest.lib import exceptions as lib_exc
+from tempest.lib.common.utils import data_utils, test_utils
 from tempest.scenario import manager
 
 from blazar_tempest_plugin.tests.base import ReservationTestCase
@@ -11,7 +13,7 @@ CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
-class ReservationScenarioTest(ReservationTestCase, manager.NetworkScenarioTest):
+class ReservationScenarioTest(ReservationTestCase, manager.ScenarioTest):
     """Base class for scenario tests focused on reservable resources."""
 
     def setUp(self):
@@ -56,6 +58,10 @@ class ReservationScenarioTest(ReservationTestCase, manager.NetworkScenarioTest):
             hypervisor_properties=hypervisor_properties,
         )
 
+
+class ReservableNetworkScenarioTest(
+    ReservationScenarioTest, manager.NetworkScenarioTest
+):
     def reserve_network(
         self, resource_properties="", network_properties="", network_name=None
     ):
@@ -67,6 +73,11 @@ class ReservationScenarioTest(ReservationTestCase, manager.NetworkScenarioTest):
         )
 
     def wait_for_reservable_network(self, network_client, network_name):
+        """Wait for network lease to become active.
+
+        Returns a list of networks that were reserved.
+        """
+
         def is_active(network: dict):
             return network.get("status") == "ACTIVE"
 
@@ -77,3 +88,98 @@ class ReservationScenarioTest(ReservationTestCase, manager.NetworkScenarioTest):
                 return networks
             time.sleep(network_client.build_interval)
         raise lib_exc.TimeoutException
+
+    def create_subnet_on_isolated_network(self, network):
+        """Re-implement create subnet helper,
+        assumption that network has no other subnets.
+
+        """
+
+        client = self.subnets_client
+
+        subnet_name = self._get_name_prefix("-subnet")
+        subnet = client.create_subnet(
+            network_id=network["id"],
+            ip_version=4,
+            cidr="10.20.30.40/28",
+            name=subnet_name,
+        )["subnet"]
+
+        self.addCleanup(
+            test_utils.call_and_ignore_notfound_exc,
+            client.delete_subnet,
+            subnet["id"],
+        )
+        return subnet
+
+    def create_new_router_for_subnet(self, subnet):
+        client = self.routers_client
+
+        public_network_id = CONF.network.public_network_id
+        router_name = self._get_name_prefix("-router")
+
+        router = client.create_router(
+            name=router_name,
+            external_gateway_info={"network_id": public_network_id},
+        )["router"]
+
+        self.addCleanup(
+            test_utils.call_and_ignore_notfound_exc,
+            client.delete_router,
+            router["id"],
+        )
+
+        client.add_router_interface(router["id"], subnet_id=subnet["id"])
+        self.addCleanup(
+            test_utils.call_and_ignore_notfound_exc,
+            client.remove_router_interface,
+            router["id"],
+            subnet_id=subnet["id"],
+        )
+        return router
+
+    def get_server_port_id_and_ip4(self, server, ip_addr=None, **kwargs):
+        """Override parent class to avoid needing os_admin."""
+
+        if ip_addr and not kwargs.get("fixed_ips"):
+            kwargs["fixed_ips"] = "ip_address=%s" % ip_addr
+
+        # A port can have more than one IP address in some cases.
+        # If the network is dual-stack (IPv4 + IPv6), this port is associated
+        # with 2 subnets
+
+        def _is_active(port):
+            return port["status"] == "ACTIVE"
+
+        # Wait for all compute ports to be ACTIVE.
+        # This will raise a TimeoutException if that does not happen.
+        client = self.ports_client
+        try:
+            ports = waiters.wait_for_server_ports_active(
+                client=client, server_id=server["id"], is_active=_is_active, **kwargs
+            )
+        except lib_exc.TimeoutException:
+            LOG.error(
+                "Server ports failed transitioning to ACTIVE for " "server: %s", server
+            )
+            raise
+
+        port_map = [
+            (p["id"], fxip["ip_address"])
+            for p in ports
+            for fxip in p["fixed_ips"]
+            if _is_active(p)
+        ]
+        inactive = [p for p in ports if p["status"] != "ACTIVE"]
+        if inactive:
+            # This should just be Ironic ports, see _is_active() above
+            LOG.debug("Instance has ports that are not ACTIVE: %s", inactive)
+
+        self.assertNotEmpty(port_map, "No IPv4 addresses found in: %s" % ports)
+        self.assertEqual(
+            len(port_map),
+            1,
+            "Found multiple IPv4 addresses: %s. "
+            "Unable to determine which port to target." % port_map,
+        )
+        return port_map[0]
