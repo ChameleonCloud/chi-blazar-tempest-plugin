@@ -46,13 +46,12 @@ class ReservationClient(rest_client.RestClient):
     def update_lease(self, lease_id, body):
         body = json.dump_as_bytes(body)
         resp, body = self.put(self.lease_path % str(lease_id), body=body)
-        self.expected_success(
-            [http_client.ACCEPTED, http_client.NO_CONTENT], resp.status
-        )
+        self.expected_success(http_client.OK, resp.status)
         return resp, self.deserialize(body)
 
     def delete_lease(self, lease_id):
         resp, body = self.delete(self.lease_path % str(lease_id))
+        # TODO! blazar is returning 200 in some cases when this should be 204
         self.expected_success([http_client.OK, http_client.NO_CONTENT], resp.status)
         return resp, self.deserialize(body)
 
