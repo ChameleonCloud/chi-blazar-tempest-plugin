@@ -27,6 +27,11 @@ class ReservationClient(rest_client.RestClient):
 
         return json.loads(object_str)
 
+    def _response_helper(self, resp, body=None):
+        if body:
+            body = json.loads(body)
+        return rest_client.ResponseBody(resp, body)
+
     def list_lease(self):
         resp, body = self.get(self.lease)
         self.expected_success(http_client.OK, resp.status)
