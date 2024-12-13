@@ -20,16 +20,16 @@ class ReservableHostsClient(base.BaseReservableResourceClient):
         uri = self.host_path_uri % host_id
         return self.show_resource(uri)
 
-    def create_host(self):
+    def create_host(self, **kwargs):
         raise lib_exc.NotImplemented
 
-    def delete_host(self):
+    def delete_host(self, host_id):
         raise lib_exc.NotImplemented
 
-    def update_host(self):
+    def update_host(self, host_id, **kwargs):
         raise lib_exc.NotImplemented
 
-    def reallocate_host(self):
+    def reallocate_host(self, host_id):
         raise lib_exc.NotImplemented
 
     def list_host_allocations(self):

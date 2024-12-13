@@ -14,11 +14,20 @@ class LeasesClient(base.BaseReservableResourceClient):
         uri = self.lease_path_uri % lease_id
         return self.show_resource(uri)
 
-    def create_lease(self):
-        raise lib_exc.NotImplemented
+    def create_lease(self, **kwargs):
+        post_body = {**kwargs}
 
-    def delete_lease(self):
-        raise lib_exc.NotImplemented
+        return self.create_resource(self.lease_uri, post_body)
 
-    def update_lease(self):
-        raise lib_exc.NotImplemented
+    def delete_lease(self, lease_id):
+        uri = self.lease_path_uri % lease_id
+        return self.delete_resource(
+            uri,
+            expect_empty_body=False,
+            expect_response_code=200,
+        )
+
+    def update_lease(self, lease_id, **kwargs):
+        uri = self.lease_path_uri % lease_id
+        update_body = {**kwargs}
+        return self.update_resource(uri, update_body)
