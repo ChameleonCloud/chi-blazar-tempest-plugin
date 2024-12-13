@@ -25,10 +25,18 @@ class BaseReservableResourceClient(rest_client.RestClient):
         self.expected_success(200, resp.status)
         return rest_client.ResponseBody(resp, body)
 
-    def delete_resource(self, uri):
+    def delete_resource(self, uri, expect_empty_body=False, expect_response_code=200):
         req_uri = uri
         resp, body = self.delete(req_uri)
-        self.expected_success(204, resp.status)
+
+        # what we're *supposed* to see is a a body if 200 or 202, and no body if 204
+        self.expected_success(expect_response_code, resp.status)
+
+        if not expect_empty_body:
+            body = json.loads(body)
+        else:
+            body = None
+
         return rest_client.ResponseBody(resp, body)
 
     def show_resource(self, uri):
