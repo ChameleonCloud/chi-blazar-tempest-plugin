@@ -1,14 +1,10 @@
 import json
-import time
 
-import netaddr
 from oslo_log import log as logging
 from tempest import config
-from tempest.common import compute, waiters
 from tempest.lib import decorators
-from tempest.lib import exceptions as lib_exc
-from tempest.lib.common.utils import data_utils, test_utils
 
+from blazar_tempest_plugin.common import exceptions, utils, waiters
 from blazar_tempest_plugin.tests.scenario.base import ReservationScenarioTest
 
 CONF = config.CONF
@@ -44,17 +40,31 @@ class TestReservableBaremetalNode(ReservationScenarioTest):
             "resource_properties": "",
         }
 
-        lease = self.get_lease_now(hours=1, reservations=[host_reservation_request])
-        self.wait_for_lease_status(lease_id=lease["id"], status="ACTIVE")
+        end_date = utils.time_offset_to_blazar_string(hours=1)
+        lease = self.create_test_lease(
+            start_date="now",
+            end_date=end_date,
+            reservations=[host_reservation_request],
+        )
 
+        active_lease = waiters.wait_for_lease_status(
+            self.leases_client, lease["id"], "ACTIVE"
+        )
+
+        return active_lease
+
+    def _get_host_reservation(self, lease):
         for res in lease["reservations"]:
             if res["resource_type"] == "physical:host":
                 return res["id"]
 
     @decorators.attr(type="smoke")
     def test_reservable_server_basic_ops(self):
+        lease = self._reserve_physical_host()
+        reservation_id = self._get_host_reservation(lease)
+        LOG.debug(f"got reservation id {reservation_id}")
+
         keypair = self.create_keypair()
-        reservation_id = self._reserve_physical_host()
         self.instance = self.create_server(
             keypair=keypair,
             wait_until="SSHABLE",
