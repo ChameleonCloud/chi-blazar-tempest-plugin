@@ -1,17 +1,31 @@
 from oslo_serialization import jsonutils as json
+from tempest import config
 from tempest.lib import decorators
+from tempest.lib.common.utils import data_utils
 from tempest.lib.exceptions import Forbidden, NotFound
 
+from blazar_tempest_plugin.common import utils, waiters
 from blazar_tempest_plugin.tests.api.base import ReservationApiTest
 
-BLAZAR_POLICY_PROJECT_BUG = 123456789
+CONF = config.CONF
 
 
 class TestLeasesBasic(ReservationApiTest):
     @classmethod
     def resource_setup(cls):
-        super().resource_setup()
-        cls.lease = cls.create_test_lease()
+        lease_name = cls.get_resource_name("-lease")
+        cls.lease = cls.create_test_lease(name=lease_name)
+
+    def test_list_leases(self):
+        leases_body = self.leases_client.list_leases()
+        self.assertIn("leases", leases_body)
+        leases = leases_body["leases"]
+
+        self.assertEqual(1, len(leases))
+
+        found_lease = leases[0]
+        self.assertEqual(self.lease["id"], found_lease["id"])
+        self.assertEqual(self.lease["name"], found_lease["name"])
 
     def test_show_lease(self):
         """Test to see that a user can look up their own lease by ID."""
@@ -22,16 +36,6 @@ class TestLeasesBasic(ReservationApiTest):
 
         self.assertEqual(self.lease["name"], shown_lease["name"])
         self.assertEqual(self.lease["id"], shown_lease["id"])
-
-    def test_list_leases(self):
-        leases_body = self.leases_client.list_leases()
-        self.assertIn("leases", leases_body)
-        leases = leases_body["leases"]
-        self.assertEqual(1, len(leases))
-
-        found_lease = leases[0]
-        self.assertEqual(self.lease["id"], found_lease["id"])
-        self.assertEqual(self.lease["name"], found_lease["name"])
 
 
 class TestLeasesStatus(ReservationApiTest):
@@ -52,7 +56,7 @@ class TestLeasesStatus(ReservationApiTest):
         """Create a lease with no resouces, well in the future.
         Ensure that create,show,delete works.
         """
-        lease_name = self._get_name_prefix("-lease")
+        lease_name = self.get_resource_name("-lease")
         lease = self.create_test_lease(name=lease_name)
         self.assertEqual(lease_name, lease["name"])
 
@@ -75,9 +79,9 @@ class TestLeasesStatus(ReservationApiTest):
         self.assertRaises(NotFound, self.leases_client.show_lease, lease["id"])
 
     def test_create_show_delete_lease_active(self):
-        lease_name = self._get_name_prefix("-lease")
+        lease_name = self.get_resource_name("-lease")
         start_date = "now"
-        end_date = self._get_blazar_time_offset(minutes=10)
+        end_date = utils.time_offset_to_blazar_string(minutes=10)
         lease = self.create_test_lease(
             name=lease_name,
             start_date=start_date,
@@ -87,7 +91,9 @@ class TestLeasesStatus(ReservationApiTest):
         # lease initial state should be PENDING
         self.assertEquals("PENDING", lease["status"])
 
-        active_lease = self.wait_for_lease_status(lease["id"], "ACTIVE")
+        active_lease = waiters.wait_for_lease_status(
+            self.leases_client, lease["id"], "ACTIVE"
+        )
         self.assertIsNotNone(active_lease)
         self.assertIn("status", active_lease)
         self.assertEqual("ACTIVE", active_lease["status"])
@@ -97,9 +103,9 @@ class TestLeasesStatus(ReservationApiTest):
         self.assertRaises(NotFound, self.leases_client.show_lease, lease["id"])
 
     def test_create_show_delete_lease_terminated(self):
-        lease_name = self._get_name_prefix("-lease")
+        lease_name = self.get_resource_name("-lease")
         start_date = "now"
-        end_date = self._get_blazar_time_offset(minutes=1)
+        end_date = utils.time_offset_to_blazar_string(minutes=1)
 
         lease = self.create_test_lease(
             name=lease_name,
@@ -107,7 +113,9 @@ class TestLeasesStatus(ReservationApiTest):
             end_date=end_date,
         )
 
-        terminated_lease = self.wait_for_lease_status(lease["id"], "TERMINATED")
+        terminated_lease = waiters.wait_for_lease_status(
+            self.leases_client, lease["id"], "TERMINATED"
+        )
         self.assertIsNotNone(terminated_lease)
         self.assertIn("status", terminated_lease)
         self.assertEqual("TERMINATED", terminated_lease["status"])
@@ -130,7 +138,7 @@ class TestLeasesMultiUser(ReservationApiTest):
 
     @decorators.attr(type=["negative"])
     def test_show_other_project_lease(self):
-        lease_name = self._get_name_prefix("-lease")
+        lease_name = self.get_resource_name("-lease")
         lease = self.create_test_lease(name=lease_name)
 
         self.assertRaises(
@@ -142,7 +150,7 @@ class TestLeasesMultiUser(ReservationApiTest):
     @decorators.attr(type=["negative"])
     def test_list_other_project_lease(self):
         """Listing should NOT show the lease, restricted to current project."""
-        lease_name = self._get_name_prefix("-lease")
+        lease_name = self.get_resource_name("-lease")
         lease = self.create_test_lease(name=lease_name)
 
         user2_leases = self.alt_lease_client.list_leases()["leases"]
@@ -150,8 +158,8 @@ class TestLeasesMultiUser(ReservationApiTest):
 
     @decorators.attr(type=["negative"])
     def test_update_other_project_lease(self):
-        lease_name = self._get_name_prefix("-lease")
-        lease_name2 = self._get_name_prefix("-user2lease")
+        lease_name = self.get_resource_name("-lease")
+        lease_name2 = self.get_resource_name("-user2lease")
         lease = self.create_test_lease(name=lease_name)
 
         # ensure user2 gets a 403 when attempting to update the lease
@@ -172,7 +180,7 @@ class TestLeasesMultiUser(ReservationApiTest):
 
     @decorators.attr(type=["negative"])
     def test_delete_other_project_lease(self):
-        lease_name = self._get_name_prefix("-lease")
+        lease_name = self.get_resource_name("-lease")
         lease = self.create_test_lease(name=lease_name)
 
         self.assertRaises(
