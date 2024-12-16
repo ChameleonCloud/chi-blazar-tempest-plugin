@@ -1,3 +1,4 @@
+from tempest.lib import decorators
 from tempest.lib.exceptions import Forbidden
 
 from blazar_tempest_plugin.services.reservation.floatingip_client import (
@@ -16,6 +17,7 @@ class TestReservationFloatingIPsApi(ReservationApiTest):
         cls.client: ReservableFloatingIPsClient
         cls.client = cls.os_primary.reservation.ReservableFloatingIPsClient()
 
+    @decorators.attr(type=["negative"])
     def test_user_list_floatingips(self):
         """Users should not be permitted to list reservable floating IPs?"""
         self.assertRaises(Forbidden, self.client.list_floatingips)

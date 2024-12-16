@@ -2,7 +2,7 @@ import time
 
 from oslo_log import log as logging
 from tempest import config
-from tempest.common import waiters
+from tempest.common import waiters as lib_waiters
 from tempest.lib import exceptions as lib_exc
 from tempest.lib.common.utils import data_utils, test_utils
 from tempest.scenario import manager
@@ -35,8 +35,13 @@ class ReservationScenarioTest(manager.ScenarioTest):
         super().setup_clients()
         cls.leases_client = cls.os_primary.reservation.LeasesClient()
 
-    @classmethod
-    def create_test_lease(cls, lease_name=None, **kwargs):
+    def get_resource_name(self, prefix):
+        return data_utils.rand_name(
+            prefix=CONF.resource_name_prefix,
+            name=self.__class__.__name__ + prefix,
+        )
+
+    def create_test_lease(self, lease_name=None, **kwargs):
         """Create a test lease with sane defaults for name and dates.
         Lease will be in the far future to ensure no conflicts."""
 
@@ -50,64 +55,15 @@ class ReservationScenarioTest(manager.ScenarioTest):
         kwargs.setdefault("start_date", "2050-12-26 12:00")
         kwargs.setdefault("end_date", "2050-12-27 12:00")
 
-        lease_body = cls.leases_client.create_lease(**kwargs)
+        lease_body = self.leases_client.create_lease(**kwargs)
         lease = lease_body["lease"]
 
-        cls.addClassResourceCleanup(
+        self.addClassResourceCleanup(
             test_utils.call_and_ignore_notfound_exc,
-            cls.leases_client.delete_lease,
+            self.leases_client.delete_lease,
             lease["id"],
         )
         return lease
-
-    @classmethod
-    def get_resource_name(cls, prefix):
-        return data_utils.rand_name(
-            prefix=CONF.resource_name_prefix,
-            name=cls.__name__ + prefix,
-        )
-
-    # def setUp(self):
-    #     super().setUp()
-    #     self.run_ssh = CONF.validation.run_validation
-    #     self.ssh_user = CONF.validation.image_ssh_user
-
-    # def verify_ssh(self, keypair):
-    #     if self.run_ssh:
-    #         # Obtain server IP
-    #         self.ip = self.get_server_ip(self.instance)
-    #         # Check ssh
-    #         self.ssh_client = self.get_remote_client(
-    #             ip_address=self.ip,
-    #             username=self.ssh_user,
-    #             private_key=keypair["private_key"],
-    #             server=self.instance,
-    #         )
-
-    # def reserve_one_resource(self, resource_type, resource_properties, **kwargs):
-    #     """Create a lease for quantity one of a resource, and return the reservation ID."""
-
-    #     reservation_kwargs = {
-    #         "min": "1",
-    #         "max": "1",
-    #         "resource_type": resource_type,
-    #         "resource_properties": resource_properties,
-    #         **kwargs,
-    #     }
-
-    #     lease = self.get_lease_now(hours=1, reservations=[reservation_kwargs])
-    #     return self.wait_for_lease_status(lease_id=lease["id"], status="ACTIVE")
-
-    #     # for res in lease["reservations"]:
-    #     #     if res["resource_type"] == resource_type:
-    #     #         return res["id"]
-
-    # def reserve_node(self, resource_properties="", hypervisor_properties=""):
-    #     return self.reserve_one_resource(
-    #         resource_type="physical:host",
-    #         resource_properties=resource_properties,
-    #         hypervisor_properties=hypervisor_properties,
-    #     )
 
 
 class ReservableNetworkScenarioTest(

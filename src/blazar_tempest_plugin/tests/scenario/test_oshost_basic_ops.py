@@ -59,6 +59,7 @@ class TestReservableBaremetalNode(ReservationScenarioTest):
                 return res["id"]
 
     @decorators.attr(type="smoke")
+    @decorators.attr(type="slow")
     def test_reservable_server_basic_ops(self):
         lease = self._reserve_physical_host()
         reservation_id = self._get_host_reservation(lease)
