@@ -2,6 +2,7 @@ import time
 
 from oslo_log import log as logging
 from tempest import config
+from tempest.common import compute
 from tempest.common import waiters as lib_waiters
 from tempest.lib import exceptions as lib_exc
 from tempest.lib.common.utils import data_utils, test_utils
@@ -41,9 +42,13 @@ class ReservationScenarioTest(manager.ScenarioTest):
             name=self.__class__.__name__ + prefix,
         )
 
-    def create_test_lease(self, lease_name=None, **kwargs):
+    def create_test_lease(self, leases_client=None, lease_name=None, **kwargs):
         """Create a test lease with sane defaults for name and dates.
         Lease will be in the far future to ensure no conflicts."""
+
+        # allow passing alternate credentials
+        if not leases_client:
+            leases_client = self.leases_client
 
         if not lease_name:
             lease_name = data_utils.rand_name(
@@ -55,15 +60,53 @@ class ReservationScenarioTest(manager.ScenarioTest):
         kwargs.setdefault("start_date", "2050-12-26 12:00")
         kwargs.setdefault("end_date", "2050-12-27 12:00")
 
-        lease_body = self.leases_client.create_lease(**kwargs)
+        lease_body = leases_client.create_lease(**kwargs)
         lease = lease_body["lease"]
 
-        self.addClassResourceCleanup(
+        self.addCleanup(waiters.wait_for_lease_termination, leases_client, lease["id"])
+
+        self.addCleanup(
             test_utils.call_and_ignore_notfound_exc,
-            self.leases_client.delete_lease,
+            leases_client.delete_lease,
             lease["id"],
         )
         return lease
+
+    def _reserve_physical_host(self, leases_client=None):
+        """Create a lease for a physical host and wait for it to become active.
+        Returns the reservation to be used for scheduling.
+        """
+
+        # allow passing alternate credentials
+        if not leases_client:
+            leases_client = self.leases_client
+
+        host_reservation_request = {
+            "min": "1",
+            "max": "1",
+            "resource_type": "physical:host",
+            "hypervisor_properties": "",
+            "resource_properties": "",
+        }
+
+        end_date = utils.time_offset_to_blazar_string(hours=1)
+        lease = self.create_test_lease(
+            leases_client=leases_client,
+            start_date="now",
+            end_date=end_date,
+            reservations=[host_reservation_request],
+        )
+
+        active_lease = waiters.wait_for_lease_status(
+            leases_client, lease["id"], "ACTIVE"
+        )
+
+        return active_lease
+
+    def _get_host_reservation(self, lease):
+        for res in lease["reservations"]:
+            if res["resource_type"] == "physical:host":
+                return res["id"]
 
 
 class ReservableNetworkScenarioTest(
@@ -162,7 +205,7 @@ class ReservableNetworkScenarioTest(
         # This will raise a TimeoutException if that does not happen.
         client = self.ports_client
         try:
-            ports = waiters.wait_for_server_ports_active(
+            ports = lib_waiters.wait_for_server_ports_active(
                 client=client, server_id=server["id"], is_active=_is_active, **kwargs
             )
         except lib_exc.TimeoutException:
