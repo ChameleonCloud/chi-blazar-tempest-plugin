@@ -6,6 +6,7 @@ from blazar_tempest_plugin.services.reservation import base
 class LeasesClient(base.BaseReservableResourceClient):
     lease_uri = "/leases"
     lease_path_uri = "/leases/%s"
+    lease_hosts_uri = "/leases/%s/hosts"
 
     def list_leases(self):
         return self.list_resources(self.lease_uri)
@@ -31,3 +32,7 @@ class LeasesClient(base.BaseReservableResourceClient):
         uri = self.lease_path_uri % lease_id
         update_body = {**kwargs}
         return self.update_resource(uri, update_body)
+
+    def show_hosts_in_lease(self, lease_id):
+        uri = self.lease_hosts_uri % lease_id
+        return self.show_resource(uri)
