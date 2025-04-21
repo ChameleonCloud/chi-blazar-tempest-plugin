@@ -33,8 +33,12 @@ class TestReservableBaremetalNode(ReservationScenarioTest):
     @decorators.attr(type="slow")
     def test_reservable_server_basic_ops(self):
         lease = self._reserve_physical_host()
+
+        reserved_hosts = self._get_reserved_hosts(lease)
+        LOG.info(f"got reserved_hosts {reserved_hosts}")
+
         reservation_id = self._get_host_reservation(lease)
-        LOG.debug(f"got reservation id {reservation_id}")
+        LOG.info(f"got reservation id {reservation_id}")
 
         keypair = self.create_keypair()
         self.instance = self.create_server(

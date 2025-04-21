@@ -1,3 +1,4 @@
+from oslo_log import log as logging
 from tempest import config
 from tempest.lib import decorators
 from tempest.lib.exceptions import NotFound
@@ -6,6 +7,7 @@ from blazar_tempest_plugin.common import utils, waiters
 from blazar_tempest_plugin.tests.api.base import ReservationApiTest
 
 CONF = config.CONF
+LOG = logging.getLogger(__name__)
 
 
 class TestLeasesBasic(ReservationApiTest):
@@ -122,3 +124,35 @@ class TestLeasesStatus(ReservationApiTest):
         self.leases_client.delete_lease(lease["id"])
         # we've deleted the lease, attempting to show it now should be a 404
         self.assertRaises(NotFound, self.leases_client.show_lease, lease["id"])
+
+
+class TestLeasesHosts(ReservationApiTest):
+    """
+    Basic tests that leasing a host behaves as expected.
+    """
+
+    def test_get_reserved_host_single(self):
+        """Test that if lease has reservation for hosts, included hosts can be queried."""
+
+        lease_name = self.get_resource_name("-lease")
+
+        reservations = [
+            {
+                "min": "1",
+                "max": "1",
+                "resource_type": "physical:host",
+                "hypervisor_properties": "",
+                "resource_properties": "",
+            }
+        ]
+
+        lease = self.create_test_lease(
+            name=lease_name,
+            reservations=reservations,
+        )
+
+        leases_hosts_body = self.leases_client.show_hosts_in_lease(lease["id"])
+        self.assertIn("hosts", leases_hosts_body)
+        hosts = leases_hosts_body["hosts"]
+
+        LOG.info(f"found hosts: {hosts} for lease {lease['id']}")

@@ -108,6 +108,11 @@ class ReservationScenarioTest(manager.ScenarioTest):
             if res["resource_type"] == "physical:host":
                 return res["id"]
 
+    def _get_reserved_hosts(self, lease):
+        leases_hosts_body = self.leases_client.show_hosts_in_lease(lease["id"])
+        hosts = [h for h in leases_hosts_body.get("hosts", [])]
+        return hosts
+
 
 class ReservableNetworkScenarioTest(
     ReservationScenarioTest, manager.NetworkScenarioTest
@@ -210,7 +215,7 @@ class ReservableNetworkScenarioTest(
             )
         except lib_exc.TimeoutException:
             LOG.error(
-                "Server ports failed transitioning to ACTIVE for " "server: %s", server
+                "Server ports failed transitioning to ACTIVE for server: %s", server
             )
             raise
 
