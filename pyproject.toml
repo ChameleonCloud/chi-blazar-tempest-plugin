@@ -17,3 +17,15 @@ dev = [
     "tox",
     "oslotest"
 ]
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+select = [
+    "D",        # pydocstyle
+    "E",        # pycodestyle (error)
+    "F",        # pyflakes
+    "G",        # flake8-logging-format
+    "LOG",      # flake8-logging
+]
