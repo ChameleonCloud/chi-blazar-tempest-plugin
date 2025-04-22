@@ -69,3 +69,16 @@ ReservationFeaturesGroup = [
         help="Whether to test device reservation",
     ),
 ]
+
+image_group = cfg.OptGroup(
+    name="image",
+    title="Enabled image service features",
+)
+
+ImageGroup = [
+    cfg.ListOpt(
+        "image_protected_properties",
+        default=[],
+        help=("A list of keys for which glance property protection is enabled."),
+    ),
+]

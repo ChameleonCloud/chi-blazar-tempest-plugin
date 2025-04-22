@@ -18,17 +18,12 @@ LOG = logging.getLogger(__name__)
 class GlanceProtectedImageTest(BaseImageTest):
     """Test that glance protected properties apply."""
 
-    # TODO: enable
-    # @classmethod
-    # def skip_checks(cls):
-    #     super().skip_checks()
-    #     if not CONF.image_feature_enabled.protected_properties:
-    #         msg = "Glance protected properties not supported"
-    #         raise cls.skipException(msg)
-
-    #     if not CONF.image_feature_enabled.protected_properties:
-    #         msg = "Glance protected properties not supported"
-    #         raise cls.skipException(msg)
+    @classmethod
+    def skip_checks(cls):
+        super().skip_checks()
+        if not CONF.image.image_protected_properties:
+            msg = "Glance protected properties not enabled"
+            raise cls.skipException(msg)
 
     @classmethod
     def setup_clients(cls):
@@ -60,16 +55,15 @@ class GlanceProtectedImageTest(BaseImageTest):
         )
 
         # set a property that shouldn't be protected
-        self.client.update_image(
-            image["id"], [{"add": "/foo", "value": "bar"}]
-        )
+        self.client.update_image(image["id"], [{"add": "/foo", "value": "bar"}])
         updated_image = self.client.show_image(image["id"])
         self.assertEqual("bar", updated_image["foo"])
 
+        protected_property = CONF.image.image_protected_properties[0]
         # try to set a protected property
         self.assertRaises(
             lib_exc.Forbidden,
             self.client.update_image,
             image["id"],
-            [{"add": "/chameleon-supported", "value": "true"}],
+            [{"add": f"/{protected_property}", "value": "true"}],
         )
