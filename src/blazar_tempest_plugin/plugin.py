@@ -25,6 +25,11 @@ class BlazarTempestPlugin(plugins.TempestPlugin):
             blazar_config.reservation_features_group,
             blazar_config.ReservationFeaturesGroup,
         )
+        config.register_opt_group(
+            conf,
+            blazar_config.image_group,
+            blazar_config.ImageGroup,
+        )
 
     def get_opt_lists(self):
         return [
