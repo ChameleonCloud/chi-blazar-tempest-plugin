@@ -5,7 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "tempest"
+    "tempest",
+    "manila-tempest-plugin",
 ]
 
 [project.entry-points."tempest.test_plugins"]
@@ -16,4 +17,16 @@ blazar_tempest_plugin = "blazar_tempest_plugin.plugin:BlazarTempestPlugin"
 dev = [
     "tox",
     "oslotest"
+]
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+select = [
+    "D",        # pydocstyle
+    "E",        # pycodestyle (error)
+    "F",        # pyflakes
+    "G",        # flake8-logging-format
+    "LOG",      # flake8-logging
 ]
