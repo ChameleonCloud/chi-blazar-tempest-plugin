@@ -5,7 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "tempest"
+    "tempest",
+    "manila-tempest-plugin",
 ]
 
 [project.entry-points."tempest.test_plugins"]
