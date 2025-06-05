@@ -2,7 +2,6 @@ import time
 
 from oslo_log import log as logging
 from tempest import config
-from tempest.common import compute
 from tempest.common import waiters as lib_waiters
 from tempest.lib import exceptions as lib_exc
 from tempest.lib.common.utils import data_utils, test_utils
@@ -22,9 +21,9 @@ class ReservationScenarioTest(manager.ScenarioTest):
     @classmethod
     def skip_checks(cls):
         super().skip_checks()
-        if not CONF.service_available.blazar:
-            skip_msg = "Blazar is disabled"
-            raise cls.skipException(skip_msg)
+        if CONF.reservation.reservation_required:
+            if not CONF.service_available.blazar:
+                raise cls.skipException("Blazar is disabled but reservation_required=True")
 
     @classmethod
     def setup_credentials(cls):
