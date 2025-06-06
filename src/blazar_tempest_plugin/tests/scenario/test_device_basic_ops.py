@@ -93,6 +93,7 @@ class ReservationZunTest(ReservationScenarioTest):
 
         return active_lease
 
+    @decorators.attr(type="smoke")
     def test_container_launch_with_reservation(self):
         """Test launching a container with a reservation."""
         lease = self._reserve_device()
