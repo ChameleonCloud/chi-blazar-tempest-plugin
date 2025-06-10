@@ -10,7 +10,7 @@ reservation_group = cfg.OptGroup(
 )
 
 reservation_features_group = cfg.OptGroup(
-    name="reservation_feature_enabled",
+    name="reservation-feature-enabled",
     title="Enabled features for resource reservation",
 )
 
@@ -43,6 +43,11 @@ ReservationGroup = [
 ]
 
 ReservationFeaturesGroup = [
+    cfg.BoolOpt(
+        "host_plugin",
+        default=True,
+        help="Whether to test host reservation",
+    ),
     cfg.BoolOpt(
         "flavor_instance_plugin",
         default=True,
