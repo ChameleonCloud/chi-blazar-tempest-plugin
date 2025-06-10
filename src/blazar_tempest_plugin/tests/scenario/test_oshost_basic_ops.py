@@ -32,9 +32,8 @@ class TestReservableBaremetalNode(ReservationScenarioTest):
     @classmethod
     def skip_checks(cls):
         super().skip_checks()
-        if not CONF.service_available.ironic:
-            skip_msg = "Ironic service is not available"
-            raise cls.skipException(skip_msg)
+        if not CONF.reservation_feature_enabled.host_plugin:
+            raise cls.skipException("host reservations are not enabled")
 
     @decorators.attr(type="smoke")
     @decorators.attr(type="slow")
