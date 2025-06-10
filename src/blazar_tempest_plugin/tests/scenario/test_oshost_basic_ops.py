@@ -29,6 +29,13 @@ class TestReservableBaremetalNode(ReservationScenarioTest):
     Much of the logic is copied from tempest.scenario.test_server_basic_ops
     """
 
+    @classmethod
+    def skip_checks(cls):
+        super().skip_checks()
+        if not CONF.service_available.ironic:
+            skip_msg = "Ironic service is not available"
+            raise cls.skipException(skip_msg)
+
     @decorators.attr(type="smoke")
     @decorators.attr(type="slow")
     def test_reservable_server_basic_ops(self):
