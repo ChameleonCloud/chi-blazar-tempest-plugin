@@ -1,12 +1,9 @@
-import json
-
 from tempest import config
+from tempest.lib import exceptions
 from tempest.lib import decorators
-from tempest.lib.common import api_version_utils
 from tempest.lib.common.utils import data_utils, test_utils
 from zun_tempest_plugin.tests.tempest.api.clients import (
     ZunClient,
-    reset_container_service_api_microversion,
     set_container_service_api_microversion,
 )
 from zun_tempest_plugin.tests.tempest.api.common import datagen
@@ -93,22 +90,52 @@ class ReservationZunTest(ReservationScenarioTest):
 
         return active_lease
 
-    @decorators.attr(type="smoke")
-    def test_container_launch_with_reservation(self):
-        """Test launching a container with a reservation."""
-        lease = self._reserve_device()
-
-        hints = {}
-        hints["reservation"] = self._get_device_reservation(lease)
+    def _create_reserved_container(self):
         _, container = self._create_container(
             name=data_utils.rand_name("reservation-container"),
-            hints=hints,
+            hints=self.hints,
             image="busybox",
             command="sleep 60",
         )
+        return container
 
-        # get refreshed container info
-        resp, container = self.container_client.get_container(container.uuid)
+    def setUp(self):
+        super(ReservationZunTest, self).setUp()
+        self.lease = self._reserve_device()
+        self.hints = {"reservation": self._get_device_reservation(self.lease)}
+        self.container = self._create_reserved_container()
+
+    @decorators.attr(type="smoke")
+    def test_container_launch_with_reservation(self):
+        """Test launching a container with a reservation."""
+        resp, container = self.container_client.get_container(self.container.uuid)
         self.assertEqual("Running", container.status)
 
-        # TODO: should run some commands in the container and check the output
+    @decorators.attr(type="smoke")
+    def test_list_container(self):
+        """Test listing containers."""
+        resp, containers = self.container_client.list_containers()
+        self.assertEqual(200, resp.status)
+
+        data = containers.to_dict()
+        for c in data.get('containers', []):
+            self.assertIn('uuid', c)
+        uuids = [c['uuid'] for c in data['containers']]
+        self.assertEqual(len(uuids), len(set(uuids)))
+        self.assertEqual(1, len(uuids))
+        self.assertIn(self.container.uuid, uuids)
+
+    @decorators.attr(type="smoke")
+    def test_delete_container(self):
+        """Test deleting container."""
+        del_resp = self.container_client.delete_container(
+            self.container.uuid,
+            {"stop": True}
+        )
+        self.assertIn(del_resp[0].status, (202, 204))
+        try:
+            self.container_client.ensure_container_in_desired_state(
+                self.container.uuid, "Deleted"
+            )
+        except exceptions.NotFound:
+            pass
