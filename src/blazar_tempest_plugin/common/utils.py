@@ -47,7 +47,7 @@ def should_skip(check_name, check_regex):
     Check if a test should be skipped based on the configuration.
 
     For example, on KVM we want to skip 2 tests:
-    skip_test_regex = verify_rclone_and_object_store|verify_openrc
+    cc_image_tests_skip_test_regex = verify_rclone_and_object_store|verify_openrc
     """
     if check_regex and re.fullmatch(check_regex, check_name):
         return True

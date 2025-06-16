@@ -32,20 +32,20 @@ def verify_cloud_init(self, remote):
 
 def verify_openrc_exists(self, remote):
     self.assertTrue(
-        wait_for_remote_file(remote, CONF.image.openrc_path),
-        f"{CONF.image.openrc_path} did not appear within timeout"
+        wait_for_remote_file(remote, CONF.image.cc_image_tests_openrc_path),
+        f"{CONF.image.cc_image_tests_openrc_path} did not appear within timeout"
     )
 
 
 def verify_openrc(self, remote):
     self.assertTrue(
-        wait_for_remote_file(remote, CONF.image.openrc_path),
-        f"{CONF.image.openrc_path} did not appear within timeout"
+        wait_for_remote_file(remote, CONF.image.cc_image_tests_openrc_path),
+        f"{CONF.image.cc_image_tests_openrc_path} did not appear within timeout"
     )
     output = remote.exec_command(
-        f'bash -c "source {CONF.image.openrc_path} && openstack token issue -f value -c id" || echo FAILED'
+        f'bash -c "source {CONF.image.cc_image_tests_openrc_path} && openstack token issue -f value -c id" || echo FAILED'
     )
-    self.assertNotIn("FAILED", output, f"Failed to source {CONF.image.openrc_path} or run OpenStack command.")
+    self.assertNotIn("FAILED", output, f"Failed to source {CONF.image.cc_image_tests_openrc_path} or run OpenStack command.")
     self.assertTrue(output.strip(), "OpenStack command produced no output — openrc may not have been sourced correctly.")
 
 
@@ -222,7 +222,7 @@ def make_image_test_class(image_name):
     for test_name, test_func in TESTS:
         def make_test(test_name, test_func):
             def test_fn(self):
-                if should_skip(test_name, CONF.image.skip_test_regex):
+                if should_skip(test_name, CONF.image.cc_image_tests_skip_test_regex):
                     self.skipTest(f"{test_name} skipped")
                 if test_name == "verify_ssh_key_injection":
                     test_func(self, type(self).remote, type(self).public_key)
@@ -247,7 +247,7 @@ def generate_tests():
     created_classes = set()
     module = sys.modules[__name__]
 
-    for image_name in getattr(CONF.image, "image_names", []):
+    for image_name in getattr(CONF.image, "cc_image_tests_image_names", []):
         image_name = image_name.strip()
         if image_name in created_classes:
             LOG.warning(f"Skipping duplicate image_name in config: {image_name}")

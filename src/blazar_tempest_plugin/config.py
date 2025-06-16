@@ -87,17 +87,17 @@ ImageGroup = [
         help=("A list of keys for which glance property protection is enabled."),
     ),
     cfg.ListOpt(
-        "image_names",
+        "cc_image_tests_image_names",
         default=[],
         help=("A comma-separated list of image names to test (e.g. CC-Ubuntu24.04,CC-Ubuntu22.04)."),
     ),
     cfg.StrOpt(
-        "skip_test_regex",
+        "cc_image_tests_skip_test_regex",
         default='',
         help=("Regex for test method names to skip during image tests (e.g. verify_rclone_and_object_store|verify_openrc)."),
     ),
     cfg.StrOpt(
-        "openrc_path",
+        "cc_image_tests_openrc_path",
         default="/home/cc/openrc",
         help="Path to the openrc file on the server used in image tests.",
     ),
