@@ -55,6 +55,12 @@ def should_skip(check_name, check_regex):
     return False
 
 
+def get_device_reservation_from_lease(lease):
+        for res in lease["reservations"]:
+            if res["resource_type"] == "device":
+                return res["id"]
+
+
 # def _get_time_now() -> datetime:
 #     time_now = datetime.now(timezone.utc)
 #     return time_now

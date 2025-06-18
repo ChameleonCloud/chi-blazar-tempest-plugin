@@ -1,44 +1,34 @@
-import json
-
 from tempest import config
+from tempest.lib import exceptions
 from tempest.lib import decorators
-from tempest.lib.common import api_version_utils
 from tempest.lib.common.utils import data_utils, test_utils
 from zun_tempest_plugin.tests.tempest.api.clients import (
     ZunClient,
-    reset_container_service_api_microversion,
     set_container_service_api_microversion,
 )
 from zun_tempest_plugin.tests.tempest.api.common import datagen
 
 from blazar_tempest_plugin.common import utils, waiters
-from blazar_tempest_plugin.tests.scenario.base import ReservationScenarioTest
-
-# Tests for CHI@Edge containers on devices
+from blazar_tempest_plugin.tests.api.base import ReservationApiTest
 
 
 CONF = config.CONF
 
 
-class ReservationZunTest(ReservationScenarioTest):
-    """Test Zun operations with CHI@Edge reservations."""
-
-    # override so as to not use admin credentials
-    credentials = ["primary"]
+class TestReservationContainerApi(ReservationApiTest):
+    """Test containers API on CHI@Edge."""
 
     @classmethod
     def skip_checks(cls):
-        super(ReservationZunTest, cls).skip_checks()
+        super(TestReservationContainerApi, cls).skip_checks()
         if not CONF.service_available.zun:
             raise cls.skipException("Zun service is not available.")
 
     @classmethod
     def setup_clients(cls):
-        super(ReservationZunTest, cls).setup_clients()
+        super(TestReservationContainerApi, cls).setup_clients()
         cls.floating_ips_client = cls.os_primary.floating_ips_client
         cls.container_client = ZunClient(cls.os_primary.auth_provider)
-
-        # set microversion to 1.12 so we can delete the test containers
         cls.request_microversion = CONF.container_service.min_microversion
         set_container_service_api_microversion(cls.request_microversion)
 
@@ -46,7 +36,6 @@ class ReservationZunTest(ReservationScenarioTest):
         gen_model = datagen.container_data(default_data={}, **kwargs)
         resp, model = self.container_client.post_container(gen_model)
 
-        # specify "stop" so that running containers can be deleted withot admin
         self.addCleanup(
             test_utils.call_and_ignore_notfound_exc,
             self.container_client.delete_container,
@@ -55,11 +44,7 @@ class ReservationZunTest(ReservationScenarioTest):
         )
 
         self.assertEqual(202, resp.status)
-        # Wait for container to finish creation
-        # In chi@edge, we skip the created state and go directly to Running
-        # TODO: need to handle "error" and "deleted" failure states
         self.container_client.ensure_container_in_desired_state(model.uuid, "Running")
-        # TODO: log how long it took to get to Running state
         return resp, model
 
     def _reserve_device(self, leases_client=None):
@@ -76,7 +61,6 @@ class ReservationZunTest(ReservationScenarioTest):
 
         end_date = utils.time_offset_to_blazar_string(hours=1)
         lease = self.create_test_lease(
-            leases_client=leases_client,
             start_date="now",
             end_date=end_date,
             reservations=[device_reservation_request],
@@ -88,22 +72,52 @@ class ReservationZunTest(ReservationScenarioTest):
 
         return active_lease
 
-    @decorators.attr(type="smoke")
-    def test_container_launch_with_reservation(self):
-        """Test launching a container with a reservation."""
-        lease = self._reserve_device()
-
-        hints = {}
-        hints["reservation"] = utils.get_device_reservation_from_lease(lease)
+    def _create_reserved_container(self):
         _, container = self._create_container(
             name=data_utils.rand_name("reservation-container"),
-            hints=hints,
+            hints=self.hints,
             image="busybox",
             command="sleep 60",
         )
+        return container
 
-        # get refreshed container info
-        resp, container = self.container_client.get_container(container.uuid)
+    def setUp(self):
+        super(TestReservationContainerApi, self).setUp()
+        self.lease = self._reserve_device()
+        self.hints = {"reservation": utils.get_device_reservation_from_lease(self.lease)}
+        self.container = self._create_reserved_container()
+
+    @decorators.attr(type="smoke")
+    def test_launch_reserved_container(self):
+        """Test launching a container."""
+        resp, container = self.container_client.get_container(self.container.uuid)
         self.assertEqual("Running", container.status)
 
-        # TODO: should run some commands in the container and check the output
+    @decorators.attr(type="smoke")
+    def test_list_container(self):
+        """Test listing containers."""
+        resp, containers = self.container_client.list_containers()
+        self.assertEqual(200, resp.status)
+
+        data = containers.to_dict()
+        for c in data.get('containers', []):
+            self.assertIn('uuid', c)
+        uuids = [c['uuid'] for c in data['containers']]
+        self.assertEqual(len(uuids), len(set(uuids)))
+        self.assertEqual(1, len(uuids))
+        self.assertIn(self.container.uuid, uuids)
+
+    @decorators.attr(type="smoke")
+    def test_delete_container(self):
+        """Test deleting a container."""
+        del_resp = self.container_client.delete_container(
+            self.container.uuid,
+            {"stop": True}
+        )
+        self.assertIn(del_resp[0].status, (202, 204))
+        try:
+            self.container_client.ensure_container_in_desired_state(
+                self.container.uuid, "Deleted"
+            )
+        except exceptions.NotFound:
+            pass
