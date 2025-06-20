@@ -48,3 +48,11 @@ class TestReservationContainerApi(ContainerApiBase):
             )
         except exceptions.NotFound:
             pass
+
+    @decorators.attr(type="smoke")
+    def test_get_container_logs(self):
+        """Test get logs from a container."""
+        resp, logs = self.container_client.get(f"/containers/{self.container.uuid}/logs")
+        self.assertEqual(200, resp.status)
+        output = logs.decode('utf-8')
+        self.assertIn('hello-from-container', output)
