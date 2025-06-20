@@ -13,6 +13,7 @@ class TestReservationContainerApiFailures(ContainerApiBase):
         super(TestReservationContainerApiFailures, self).setUp()
 
     @decorators.attr(type="smoke")
+    @decorators.attr(type=['negative'])
     def test_launch_unreserved_container_fails(self):
         """Test launching an unreserved container fails."""
         self.container = self._create_reserved_container("unreserved-container", {}, "Error")
@@ -20,6 +21,7 @@ class TestReservationContainerApiFailures(ContainerApiBase):
         self.assertEqual("Error", container.status)
 
     @decorators.attr(type="smoke")
+    @decorators.attr(type=['negative'])
     def test_launch_container_with_expired_lease_fails(self):
         """Test launching a container with an expired lease fails."""
         # create a short lease and wait for it to expire
@@ -35,6 +37,7 @@ class TestReservationContainerApiFailures(ContainerApiBase):
         self.assertEqual("Error", container.status)
 
     @decorators.attr(type="smoke")
+    @decorators.attr(type=['negative'])
     def test_launch_container_with_future_lease_fails(self):
         """Test launching a container with a future lease fails."""
         self.lease = self._reserve_device(
