@@ -131,6 +131,12 @@ class TestLeasesHosts(ReservationApiTest):
     Basic tests that leasing a host behaves as expected.
     """
 
+    @classmethod
+    def skip_checks(cls):
+        super(TestLeasesHosts, cls).skip_checks()
+        if not CONF.reservation_feature_enabled.host_plugin:
+            raise cls.skipException("host reservations are not enabled")
+
     def test_get_reserved_host_single(self):
         """Test that if lease has reservation for hosts, included hosts can be queried."""
 
