@@ -40,6 +40,10 @@ ReservationGroup = [
         "reservable_flavor_ref",
         help="flavor to use for reservable instances",
     ),
+    cfg.StrOpt(
+        "reservable_arm_node_type",
+        help="Node type to use for reservable ARM hosts",
+    ),
     cfg.BoolOpt(
         "reservation_required",
         default=True,
