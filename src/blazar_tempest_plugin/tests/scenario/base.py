@@ -71,7 +71,7 @@ class ReservationScenarioTest(manager.ScenarioTest):
         )
         return lease
 
-    def _reserve_physical_host(self, leases_client=None):
+    def _reserve_physical_host(self, leases_client=None, node_type=None):
         """Create a lease for a physical host and wait for it to become active.
         Returns the reservation to be used for scheduling.
         """
@@ -80,12 +80,16 @@ class ReservationScenarioTest(manager.ScenarioTest):
         if not leases_client:
             leases_client = self.leases_client
 
+        resource_properties = ""
+        if node_type:
+            resource_properties = f'[ "==", "$node_type", "{node_type}" ]'
+
         host_reservation_request = {
             "min": "1",
             "max": "1",
             "resource_type": "physical:host",
             "hypervisor_properties": "",
-            "resource_properties": "",
+            "resource_properties": resource_properties,
         }
 
         end_date = utils.time_offset_to_blazar_string(hours=1)

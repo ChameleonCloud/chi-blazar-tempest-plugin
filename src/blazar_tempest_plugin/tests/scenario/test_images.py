@@ -136,7 +136,8 @@ def make_image_test_class(image_name):
 
             try:
                 if CONF.reservation.reservation_required:
-                    lease = inst._reserve_physical_host()
+                    node_type = "compute_arm64" if "ARM64" in cls.image_name else None
+                    lease = inst._reserve_physical_host(node_type=node_type)
                     cls.lease_id = lease["id"]
                     reservation_id = inst._get_host_reservation(lease)
                     flavor = CONF.reservation.reservable_flavor_ref
