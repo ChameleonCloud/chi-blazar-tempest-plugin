@@ -48,8 +48,13 @@ class TestLeaseContainers(ContainerApiBase):
     def test_delete_lease_with_container(self):
         """Test deleting a lease with an associated container also deletes the container."""
 
+        _, container = self.container_client.get_container(self.container.uuid)
+        self.assertEqual("Running", container.status)
+
         resp = self.leases_client.delete_lease(self.lease["id"])
         self.assertEquals(200, resp.response.status)
+
+        waiters.wait_for_lease_termination(self.leases_client, self.lease["id"])
 
         try:
             self.container_client.ensure_container_in_desired_state(
@@ -73,15 +78,19 @@ class TestLeaseContainers(ContainerApiBase):
             "resource_properties": f'["and", ["==", "$machine_name", "raspberrypi4-64"], ["==", "$uid", "{device_id}"]]',
         }
 
-        try:
-            self.create_test_lease(
-                start_date=start,
-                end_date=end,
-                reservations=[device_reservation_request],
-            )
-            self.fail("Exception not raised when attempting to double-book the same device")
-        except exceptions.ServerFault as e:
-            self.assertIn("not enough resources available", str(e).lower())
+        exc = self.assertRaises(
+            exceptions.ServerFault,
+            self.create_test_lease,
+            start_date=start,
+            end_date=end,
+            reservations=[device_reservation_request],
+        )
+
+        self.assertIn(
+            "not enough resources available",
+            str(exc).lower(),
+            "Expected 'not enough resources available' error not found in exception message"
+        )
 
     @decorators.attr(type="smoke")
     def test_device_in_lease(self):
