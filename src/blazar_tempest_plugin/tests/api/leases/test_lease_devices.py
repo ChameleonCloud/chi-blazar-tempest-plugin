@@ -61,7 +61,14 @@ class TestLeaseContainers(ContainerApiBase):
                 self.container.uuid, "Deleted"
             )
         except exceptions.NotFound:
-            pass
+            container_deleted = True
+        else:
+            container_deleted = False
+            _, container = self.container_client.get_container(self.container.uuid)
+            self.assertEqual("Deleted", container.status)
+
+        self.assertTrue(container_deleted or container.status == "Deleted",
+                        "Container was not deleted after lease deletion")
 
     @decorators.attr(type="smoke")
     def test_device_not_in_multiple_leases(self):
