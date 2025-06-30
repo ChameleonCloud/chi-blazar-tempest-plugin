@@ -1,12 +1,8 @@
-import json
-
 from tempest import config
 from tempest.lib import decorators
-from tempest.lib.common import api_version_utils
 from tempest.lib.common.utils import data_utils, test_utils
 from zun_tempest_plugin.tests.tempest.api.clients import (
     ZunClient,
-    reset_container_service_api_microversion,
     set_container_service_api_microversion,
 )
 from zun_tempest_plugin.tests.tempest.api.common import datagen
@@ -46,7 +42,7 @@ class ReservationZunTest(ReservationScenarioTest):
         gen_model = datagen.container_data(default_data={}, **kwargs)
         resp, model = self.container_client.post_container(gen_model)
 
-        # specify "stop" so that running containers can be deleted withot admin
+        # specify "stop" so that running containers can be deleted without admin
         self.addCleanup(
             test_utils.call_and_ignore_notfound_exc,
             self.container_client.delete_container,
@@ -106,4 +102,46 @@ class ReservationZunTest(ReservationScenarioTest):
         resp, container = self.container_client.get_container(container.uuid)
         self.assertEqual("Running", container.status)
 
-        # TODO: should run some commands in the container and check the output
+        # add a floating IP and verify it's there and usable
+        fip = self.floating_ips_client.create_floatingip(
+            floating_network_id=CONF.network.public_network_id
+        )
+        fip_list = self.floating_ips_client.list_floatingips()
+        self.assertIn(fip["floatingip"]["id"], [fip["id"] for fip in fip_list["floatingips"]],
+                      "Floating IP was not added successfully.")
+
+        fip_addr = fip["floatingip"]["floating_ip_address"]
+        self.addCleanup(
+            test_utils.call_and_ignore_notfound_exc,
+            self.floating_ips_client.delete_floatingip,
+            fip["floatingip"]["id"]
+        )
+
+        utils.attach_floating_ip_to_container(
+            self.container_client,
+            self.floating_ips_client,
+            container.uuid,
+            fip["floatingip"]["id"]
+        )
+        utils.wait_for_fip_on_container(
+            self.container_client,
+            self.floating_ips_client,
+            container.uuid,
+            fip_addr
+        )
+
+        _, container = self.container_client.get_container(container.uuid)
+        attached = utils.get_container_floating_ip(self.floating_ips_client, container)
+        self.assertEqual(
+            fip_addr, attached,
+            f"Expected floating IP {fip_addr} to be attached to container {container.uuid}, but got {attached}"
+        )
+
+        # verify we can ping the floating IP
+        utils.ping_ip(fip_addr)
+
+        # verify we can delete the container's floating IP and it goes away
+        self.floating_ips_client.delete_floatingip(fip["floatingip"]["id"])
+        fip_list = self.floating_ips_client.list_floatingips()
+        self.assertNotIn(fip["floatingip"]["id"], [fip["id"] for fip in fip_list["floatingips"]],
+                         "Floating IP was not deleted successfully.")
