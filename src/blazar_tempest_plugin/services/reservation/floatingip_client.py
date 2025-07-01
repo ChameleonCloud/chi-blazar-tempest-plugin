@@ -17,5 +17,6 @@ class ReservableFloatingIPsClient(base.BaseReservableResourceClient):
     def create_floatingip(self):
         raise lib_exc.NotImplemented
 
-    def delete_floatingip(self):
-        raise lib_exc.NotImplemented
+    def delete_floatingip(self, floatingip_id):
+        uri = self.floatingip_path_uri % floatingip_id
+        return self.delete_resource(uri)
