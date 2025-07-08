@@ -111,8 +111,8 @@ def make_image_test_class(image_name):
 
     class TestImage(ReservationScenarioTest):
         @classmethod
-        def setUpClass(cls):
-            super().setUpClass()
+        def resource_setup(cls):
+            super(TestImage, cls).resource_setup()
             inst = cls()
 
             resp = cls.image_client.list_images(params={
@@ -177,7 +177,7 @@ def make_image_test_class(image_name):
                 raise
 
         @classmethod
-        def tearDownClass(cls):
+        def resource_cleanup(cls):
             try:
                 if hasattr(cls, "server_id"):
                     cls.servers_client.delete_server(cls.server_id)
@@ -220,7 +220,7 @@ def make_image_test_class(image_name):
                         except tempest_exc.NotFound:
                             pass
             finally:
-                super().tearDownClass()
+                super(TestImage, cls).resource_cleanup()
 
     for test_name, test_func in TESTS:
         def make_test(test_name, test_func):
