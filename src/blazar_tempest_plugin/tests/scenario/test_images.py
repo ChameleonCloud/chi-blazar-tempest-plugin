@@ -158,7 +158,9 @@ def make_image_test_class(image_name):
                     boot_kwargs["scheduler_hints"] = scheduler_hints
 
                 server = inst.create_server(**boot_kwargs)
+
                 cls.server_id = server["id"]
+                cls.server_key_name = server["key_name"]
                 # refresh server details to get security groups and floating IP
                 server = cls.servers_client.show_server(cls.server_id)["server"]
                 cls._created_sg_names = []
@@ -206,6 +208,12 @@ def make_image_test_class(image_name):
                 if hasattr(cls, "keypair"):
                     try:
                         cls.keypairs_client.delete_keypair(cls.keypair["name"])
+                    except tempest_exc.NotFound:
+                        pass
+
+                if hasattr(cls, "server_key_name"):
+                    try:
+                        cls.keypairs_client.delete_keypair(cls.server_key_name)
                     except tempest_exc.NotFound:
                         pass
 
