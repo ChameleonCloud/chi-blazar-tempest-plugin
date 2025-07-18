@@ -114,6 +114,7 @@ def make_image_test_class(image_name):
         def resource_setup(cls):
             super(TestImage, cls).resource_setup()
             inst = cls()
+            cls.addClassResourceCleanup(inst.doCleanups)
 
             resp = cls.image_client.list_images(params={
                 'name': image_name,
