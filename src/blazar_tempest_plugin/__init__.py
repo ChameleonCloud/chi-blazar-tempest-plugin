@@ -1,6 +1,6 @@
 from tempest.lib import auth as _tl_auth
 
-from .auth.oidc_provider import (
+from blazar_tempest_plugin.auth.oidc_provider import (
     KeystoneV3OidcAuthProvider,
     KeystoneV3OidcCredentials,
 )
