@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "tempest",
-    "zun-tempest-plugin"
+    "zun-tempest-plugin",
+    "keystoneauth1",
 ]
 
 [project.entry-points."tempest.test_plugins"]
