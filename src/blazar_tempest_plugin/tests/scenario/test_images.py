@@ -242,9 +242,10 @@ def make_image_test_class(image_name):
             test_fn.__name__ = f"test_{alert_level}_{test_name}"
             test_fn.__qualname__ = f"{class_name}.{test_fn.__name__}"
             test_fn.__module__ = __name__
-            test_fn = decorators.attr(type="smoke")(test_fn)
-            if alert_level == AlertLevel.NONCRITICAL:
-                test_fn = decorators.attr(type="non_critical")(test_fn)
+            test_type = "smoke"
+            if alert_level == "NONCRITICAL":
+                test_type = "non_critical"
+            test_fn = decorators.attr(type=test_type)(test_fn)
             return test_fn
 
         test_method = make_test(alert_level.name, test_name, test_func)
