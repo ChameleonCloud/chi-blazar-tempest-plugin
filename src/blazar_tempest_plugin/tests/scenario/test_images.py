@@ -79,10 +79,10 @@ def verify_rclone_and_object_store(self, remote):
 
 
 TESTS = [
-    (AlertLevel.NONCRITICAL, "verify_cloud_init", verify_cloud_init),
-    (AlertLevel.NONCRITICAL, "verify_openrc_exists", verify_openrc_exists),
     (AlertLevel.CRITICAL, "verify_ssh_key_injection", verify_ssh_key_injection),
     (AlertLevel.CRITICAL, "verify_rclone_and_object_store", verify_rclone_and_object_store),
+    (AlertLevel.NONCRITICAL, "verify_cloud_init", verify_cloud_init),
+    (AlertLevel.NONCRITICAL, "verify_openrc_exists", verify_openrc_exists),
     (AlertLevel.NONCRITICAL, "verify_openrc", verify_openrc),
 ]
 
@@ -242,7 +242,10 @@ def make_image_test_class(image_name):
             test_fn.__name__ = f"test_{alert_level}_{test_name}"
             test_fn.__qualname__ = f"{class_name}.{test_fn.__name__}"
             test_fn.__module__ = __name__
-            return decorators.attr(type="smoke")(test_fn)
+            test_fn = decorators.attr(type="smoke")(test_fn)
+            if alert_level == AlertLevel.NONCRITICAL:
+                test_fn = decorators.attr(type="non_critical")(test_fn)
+            return test_fn
 
         test_method = make_test(alert_level.name, test_name, test_func)
         setattr(TestImage, test_method.__name__, test_method)
