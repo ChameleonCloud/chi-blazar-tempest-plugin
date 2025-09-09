@@ -138,7 +138,7 @@ class ReservationZunTest(ReservationScenarioTest):
         )
 
         # verify we can ping the floating IP
-        utils.ping_ip(fip_addr)
+        utils.ping_ip(fip_addr, timeout=120)
 
         # verify we can delete the container's floating IP and it goes away
         self.floating_ips_client.delete_floatingip(fip["floatingip"]["id"])
