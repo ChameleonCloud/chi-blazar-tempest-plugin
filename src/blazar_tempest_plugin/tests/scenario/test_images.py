@@ -239,14 +239,17 @@ def make_image_test_class(image_name):
                     test_func(self, type(self).remote, type(self).public_key)
                 else:
                     test_func(self, type(self).remote)
-            test_fn.__name__ = f"test_{alert_level}_{test_name}"
+            test_fn.__name__ = f"test_{test_name}"
             test_fn.__qualname__ = f"{class_name}.{test_fn.__name__}"
             test_fn.__module__ = __name__
-            test_type = "smoke"
-            if alert_level == "NONCRITICAL":
-                test_type = "non_critical"
-            test_fn = decorators.attr(type=test_type)(test_fn)
-            return test_fn
+
+            # annotate test with multiple types for filtering
+            test_attr_type = [
+                "slow",
+                alert_level.lower(),
+            ]
+            decorated_test_fn = decorators.attr(type=test_attr_type)(test_fn)
+            return decorated_test_fn
 
         test_method = make_test(alert_level.name, test_name, test_func)
         setattr(TestImage, test_method.__name__, test_method)
