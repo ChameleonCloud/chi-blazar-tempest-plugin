@@ -47,6 +47,7 @@ ReservationGroup = [
     cfg.StrOpt(
         "reservation_type",
         default="bare_metal",
+        choices=["bare_metal", "kvm"],
         help="If bare_metal, create a bare_metal reservation. If kvm, create a KVM reservation.",
      ),
 ]
