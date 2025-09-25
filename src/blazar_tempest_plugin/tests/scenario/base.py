@@ -21,8 +21,13 @@ class ReservationScenarioTest(manager.ScenarioTest):
     @classmethod
     def skip_checks(cls):
         super().skip_checks()
-        if not CONF.service_available.blazar:
-            raise cls.skipException("Blazar is disabled but it's required")
+        if CONF.reservation.reservation_required:
+            if not CONF.service_available.blazar:
+                raise cls.skipException("Blazar is disabled but reservation_required=True")
+            if CONF.reservation.reservation_type not in ("bare_metal", "kvm"):
+                raise cls.skipException(
+                    f"Invalid reservation_type: {CONF.reservation.reservation_type}"
+                )
 
     @classmethod
     def setup_credentials(cls):

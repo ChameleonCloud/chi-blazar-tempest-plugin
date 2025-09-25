@@ -142,6 +142,8 @@ def make_image_test_class(image_name):
             cls.public_key = cls.keypair["public_key"]
             cls.lease_id = None
 
+            flavor = CONF.compute.flavor_ref
+            scheduler_hints = {}
             if CONF.reservation.reservation_type == "bare_metal":
                 node_type = None
                 if "ARM64" in cls.image_name:
@@ -156,10 +158,7 @@ def make_image_test_class(image_name):
                 lease = inst._reserve_flavor_host(flavor_id=flavor_id)
                 cls.lease_id = lease["id"]
                 reservation_id = inst._get_flavor_reservation(lease)
-                scheduler_hints = {}
                 flavor = f"reservation:{reservation_id}"
-            else:
-                raise Exception(f"Invalid reservation_type: {CONF.reservation.reservation_type}")
 
             boot_kwargs = {
                 "image_id": cls.image_id,

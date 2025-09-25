@@ -44,6 +44,11 @@ ReservationGroup = [
         "reservable_arm_node_type",
         help="Node type to use for reservable ARM hosts",
     ),
+    cfg.BoolOpt(
+        "reservation_required",
+        default=True,
+        help="If False, run tests on on-demand KVM and skip all Blazar reservations.",
+    ),
     cfg.StrOpt(
         "reservation_type",
         default="bare_metal",
