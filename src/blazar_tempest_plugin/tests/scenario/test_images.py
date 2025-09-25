@@ -143,7 +143,7 @@ def make_image_test_class(image_name):
             cls.lease_id = None
 
             try:
-                if CONF.reservation.reservation_required:
+                if CONF.reservation.reservation_type == "bare_metal":
                     node_type = None
                     if "ARM64" in cls.image_name:
                         node_type = CONF.reservation.reservable_arm_node_type
@@ -152,20 +152,25 @@ def make_image_test_class(image_name):
                     reservation_id = inst._get_host_reservation(lease)
                     flavor = CONF.reservation.reservable_flavor_ref
                     scheduler_hints = {"reservation": reservation_id}
-                else:
-                    flavor = CONF.compute.flavor_ref
+                elif CONF.reservation.reservation_type == "kvm":
+                    flavor_id = inst._get_flavor_id(CONF.reservation.reservable_flavor_ref)
+                    lease = inst._reserve_flavor_host(flavor_id=flavor_id)
+                    cls.lease_id = lease["id"]
+                    reservation_id = inst._get_flavor_reservation(lease)
                     scheduler_hints = {}
+                    flavor = f"reservation:{reservation_id}"
+                else:
+                    raise Exception(f"Invalid reservation_type: {CONF.reservation.reservation_type}")
 
                 boot_kwargs = {
                     "image_id": cls.image_id,
                     "keypair": cls.keypair,
                     "wait_until": "SSHABLE",
-                    "flavor": flavor,
                 }
                 if scheduler_hints:
                     boot_kwargs["scheduler_hints"] = scheduler_hints
 
-                server = inst.create_server(**boot_kwargs)
+                server = inst.create_server(flavor=flavor, **boot_kwargs)
                 cls.server_id = server["id"]
                 # refresh server details to get security groups and floating IP
                 server = cls.servers_client.show_server(cls.server_id)["server"]

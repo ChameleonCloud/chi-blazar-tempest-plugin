@@ -21,9 +21,8 @@ class ReservationScenarioTest(manager.ScenarioTest):
     @classmethod
     def skip_checks(cls):
         super().skip_checks()
-        if CONF.reservation.reservation_required:
-            if not CONF.service_available.blazar:
-                raise cls.skipException("Blazar is disabled but reservation_required=True")
+        if not CONF.service_available.blazar:
+            raise cls.skipException("Blazar is disabled but it's required")
 
     @classmethod
     def setup_credentials(cls):
@@ -34,6 +33,7 @@ class ReservationScenarioTest(manager.ScenarioTest):
     def setup_clients(cls):
         super().setup_clients()
         cls.leases_client = cls.os_primary.reservation.LeasesClient()
+        cls.flavors_client = cls.os_primary.compute.FlavorsClient()
 
     def get_resource_name(self, prefix):
         return data_utils.rand_name(
@@ -115,6 +115,45 @@ class ReservationScenarioTest(manager.ScenarioTest):
         leases_hosts_body = self.leases_client.show_hosts_in_lease(lease["id"])
         hosts = [h for h in leases_hosts_body.get("hosts", [])]
         return hosts
+
+    def _reserve_flavor_host(self, leases_client=None, flavor_id=None):
+        """Create a lease for a flavor (KVM) and wait for ACTIVE."""
+        if not leases_client:
+            leases_client = self.leases_client
+
+        flavor_reservation_request = {
+            "resource_type": "flavor:instance",
+            "affinity": None,
+            "amount": 1,
+            "flavor_id": flavor_id,
+        }
+
+        end_date = utils.time_offset_to_blazar_string(hours=1)
+        lease = self.create_test_lease(
+            leases_client=leases_client,
+            start_date="now",
+            end_date=end_date,
+            reservations=[flavor_reservation_request],
+        )
+
+        active_lease = waiters.wait_for_lease_status(
+            leases_client, lease["id"], "ACTIVE"
+        )
+
+        return active_lease
+
+    def _get_flavor_reservation(self, lease):
+        """Get the reservation ID for a flavor reservation from a lease."""
+        for res in lease["reservations"]:
+            if res["resource_type"] == "flavor:instance":
+                return res["id"]
+
+    def _get_flavor_id(self, flavor_name):
+        """Get the ID of a flavor by name."""
+        flavors = self.flavors_client.list_flavors()["flavors"]
+        return next(
+            f['id'] for f in flavors if f['name'] == flavor_name
+        )
 
 
 class ReservableNetworkScenarioTest(
