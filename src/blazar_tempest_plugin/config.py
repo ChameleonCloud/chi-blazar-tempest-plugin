@@ -48,6 +48,12 @@ ReservationGroup = [
         "reservation_required",
         default=True,
         help="If False, run tests on on-demand KVM and skip all Blazar reservations.",
+    ),
+    cfg.StrOpt(
+        "reservation_type",
+        default="bare_metal",
+        choices=["bare_metal", "kvm"],
+        help="If bare_metal, create a bare_metal reservation. If kvm, create a KVM reservation.",
      ),
 ]
 
