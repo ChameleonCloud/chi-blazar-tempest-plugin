@@ -136,6 +136,6 @@ class ContainerApiBase(ReservationApiTest):
             name=data_utils.rand_name(name),
             hints=hints,
             image="busybox",
-            command="/bin/sh -c 'echo hello-from-container && sleep 60'",
+            command="/bin/sh -c 'sleep infinity'",
         )
         return container
