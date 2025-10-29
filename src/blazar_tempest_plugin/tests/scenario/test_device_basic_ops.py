@@ -91,11 +91,17 @@ class ReservationZunTest(ReservationScenarioTest):
 
         hints = {}
         hints["reservation"] = utils.get_device_reservation_from_lease(lease)
+
+        # set microversion to 1.24 to support exposed_ports arg
+        set_container_service_api_microversion("1.24")
+
         _, container = self._create_container(
             name=data_utils.rand_name("reservation-container"),
             hints=hints,
-            image="busybox",
-            command="sleep 60",
+            image="nginx:1.28.0-alpine3.21",
+            exposed_ports={
+                "80/tcp": {},
+            },
         )
 
         # get refreshed container info
@@ -133,12 +139,15 @@ class ReservationZunTest(ReservationScenarioTest):
         _, container = self.container_client.get_container(container.uuid)
         attached = utils.get_container_floating_ip(self.floating_ips_client, container)
         self.assertEqual(
-            fip_addr, attached,
-            f"Expected floating IP {fip_addr} to be attached to container {container.uuid}, but got {attached}"
+            fip_addr,
+            attached,
+            f"Expected floating IP {fip_addr} to be attached to container {container.uuid}, but got {attached}",
         )
 
-        # verify we can ping the floating IP
-        utils.ping_ip(fip_addr, timeout=120)
+        # verify the port is open
+        waiters.wait_for_tcp(port=80, host=fip_addr, timeout=120)
+        # verify the expected URL is accessible
+        waiters.wait_for_http(url=f"http://{fip_addr}:80", timeout=120)
 
         # verify we can delete the container's floating IP and it goes away
         self.floating_ips_client.delete_floatingip(fip["floatingip"]["id"])

@@ -1,6 +1,8 @@
 """Module of ways for a resource to reach a status."""
 
 import time
+import socket
+import urllib3
 
 from oslo_log import log as logging
 from tempest.lib import exceptions as lib_exc
@@ -65,6 +67,47 @@ def wait_for_lease_termination(client, lease_id, ignore_error=False):
         if int(time.time()) - start_time >= client.build_timeout:
             raise lib_exc.TimeoutException
         old_status = lease_status
+
+
+def wait_for_tcp(port: int, host: str, timeout: float = 60.0) -> None:
+    """Wait for tcp port to start responding."""
+
+    start_time = time.perf_counter()
+    while True:
+        try:
+            # If the connection works, we're done. Use context manager to clean up
+            with socket.create_connection(address=(host, port), timeout=timeout):
+                break
+        except (OSError, ConnectionRefusedError) as ex:
+            time.sleep(1)
+            if time.perf_counter() - start_time >= timeout:
+                raise TimeoutError(
+                    "Waited too long for the port {} on host {} to start accepting "
+                    "connections.".format(port, host)
+                ) from ex
+
+
+def wait_for_http(url: str, timeout: float = 60.0) -> None:
+    """Wait for an http endpoint to respond."""
+    start_time = time.perf_counter()
+
+    # create dedicated pool manager to avoid side-effects
+    poolmgr = urllib3.poolmanager.PoolManager()
+
+    # use our own retry logic, ignoring urllib's
+    while True:
+        try:
+            response = poolmgr.request(
+                method="get", url=url, timeout=4.0, retries=False
+            )
+            break
+        except urllib3.exceptions.ConnectTimeoutError as ex:
+            time.sleep(1)
+            if time.perf_counter() - start_time >= timeout:
+                raise TimeoutError(
+                    "Waited too long for the url {} to start accepting "
+                    "connections.".format(url)
+                ) from ex
 
 
 def _wait_for_server_scheduling(client, server_id: str):
