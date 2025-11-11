@@ -52,7 +52,7 @@ class TestLeaseContainers(ContainerApiBase):
         self.assertEqual("Running", container.status)
 
         resp = self.leases_client.delete_lease(self.lease["id"])
-        self.assertEquals(200, resp.response.status)
+        self.assertEqual(200, resp.response.status)
 
         waiters.wait_for_lease_termination(self.leases_client, self.lease["id"])
 

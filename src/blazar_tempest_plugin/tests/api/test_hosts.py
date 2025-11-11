@@ -62,7 +62,7 @@ class TestReservationHostsApi(ReservationApiTest):
 
         # ensure that allocation resource ID == blazar host ID
         # does NOT equal hypervisor_hostname
-        self.assertEquals(found_host["id"], host_alloc["resource_id"])
+        self.assertEqual(found_host["id"], host_alloc["resource_id"])
 
     def test_list_host_properties(self):
         properties = self.client.list_host_properties()
