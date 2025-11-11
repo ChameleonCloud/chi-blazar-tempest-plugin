@@ -90,7 +90,7 @@ class TestLeasesStatus(ReservationApiTest):
         )
 
         # lease initial state should be PENDING
-        self.assertEquals("PENDING", lease["status"])
+        self.assertEqual("PENDING", lease["status"])
 
         active_lease = waiters.wait_for_lease_status(
             self.leases_client, lease["id"], "ACTIVE"

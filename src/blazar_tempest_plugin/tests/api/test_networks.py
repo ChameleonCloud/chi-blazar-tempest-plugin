@@ -61,7 +61,7 @@ class TestReservationNetworksApi(ReservationApiTest):
 
         # ensure that allocation resource ID == blazar network ID
         # does NOT equal hypervisor_networkname
-        self.assertEquals(found_network["id"], network_alloc["resource_id"])
+        self.assertEqual(found_network["id"], network_alloc["resource_id"])
 
     def test_list_network_properties(self):
         properties = self.client.list_network_properties()
