@@ -29,6 +29,14 @@ class TestAppCredentialImplicitRoles(tempest.test.BaseTestCase):
         super().setup_credentials()
 
     @classmethod
+    def skip_checks(cls):
+        super().skip_checks()
+        if not CONF.service_available.glance:
+            raise cls.skipException("Glance service is not available.")
+        if not CONF.service_available.nova:
+            raise cls.skipException("Nova service is not available.")
+
+    @classmethod
     def setup_clients(cls):
         super().setup_clients()
         cls.app_creds_client = cls.os_primary.application_credentials_client
