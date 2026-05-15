@@ -102,12 +102,14 @@ class ContainerApiBase(ReservationApiTest):
             self,
             lease_status="ACTIVE",
             start_date="now",
-            end_date=utils.time_offset_to_blazar_string(hours=1),
+            end_date=None,
             leases_client=None
         ):
         """Reserve a device for testing."""
         if not leases_client:
             leases_client = self.leases_client
+        if end_date is None:
+            end_date = utils.time_offset_to_blazar_string(hours=1)
 
         device_reservation_request = {
             "resource_type": "device",
