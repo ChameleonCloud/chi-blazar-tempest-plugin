@@ -35,10 +35,8 @@ class ReservationApiTest(test.BaseTestCase):
         super(ReservationApiTest, cls).setup_clients()
         cls.leases_client = cls.os_primary.reservation.LeasesClient()
 
-    @classmethod
-    def create_test_lease(cls, lease_name=None, **kwargs):
-        """Create a test lease with sane defaults for name and dates.
-        Lease will be in the far future to ensure no conflicts."""
+    def create_test_lease(self, lease_name=None, **kwargs):
+        """Create a test lease with sane defaults for name and dates."""
 
         if not lease_name:
             lease_name = data_utils.rand_name(
@@ -50,12 +48,12 @@ class ReservationApiTest(test.BaseTestCase):
         kwargs.setdefault("start_date", "2050-12-26 12:00")
         kwargs.setdefault("end_date", "2050-12-27 12:00")
 
-        lease_body = cls.leases_client.create_lease(**kwargs)
+        lease_body = self.leases_client.create_lease(**kwargs)
         lease = lease_body["lease"]
 
-        cls.addClassResourceCleanup(
+        self.addCleanup(
             test_utils.call_and_ignore_notfound_exc,
-            cls.leases_client.delete_lease,
+            self.leases_client.delete_lease,
             lease["id"],
         )
         return lease
