@@ -11,10 +11,10 @@ LOG = logging.getLogger(__name__)
 
 
 class TestLeasesBasic(ReservationApiTest):
-    @classmethod
-    def resource_setup(cls):
-        lease_name = cls.get_resource_name("-lease")
-        cls.lease = cls.create_test_lease(name=lease_name)
+    def setUp(self):
+        super(TestLeasesBasic, self).setUp()
+        lease_name = self.get_resource_name("-lease")
+        self.lease = self.create_test_lease(name=lease_name)
 
     def test_list_leases(self):
         leases_body = self.leases_client.list_leases()
