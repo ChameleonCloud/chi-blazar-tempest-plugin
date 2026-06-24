@@ -65,20 +65,95 @@ class TestReservationContainerApi(ContainerApiBase):
         output = logs.decode('utf-8')
         self.assertIn('hello-from-container', output)
 
+    def _execute(self, command, **params):
+        """POST to the container execute endpoint and return (resp, raw body).
+
+        ``command`` is the command to run; extra query params (e.g. run="true"
+        or interactive="true") are passed through verbatim.
+        """
+        query = {"command": command, **params}
+        query_string = urllib.parse.urlencode(query)
+        url = f"/containers/{self.container.uuid}/execute?{query_string}"
+        return self.container_client.post(url, body=None)
+
     @decorators.attr(type="smoke")
     def test_exec_in_container(self):
         """Test executing a command in a container."""
-        query_params = {
-            "command": "echo exec-in-container",
-            "run": "true",
-        }
-        query_string = urllib.parse.urlencode(query_params)
-        url = f"/containers/{self.container.uuid}/execute?{query_string}"
-        resp, result = self.container_client.post(url, body=None)
+        resp, result = self._execute("echo exec-in-container")
         output = json.loads(result.decode('utf-8'))
         self.assertEqual(200, resp.status)
         self.assertIn("exec-in-container", output.get("output"))
         self.assertEqual(0, output.get("exit_code"))
+
+    @decorators.attr(type="smoke")
+    def test_exec_nonzero_exit_code(self):
+        """A failing command must report a non-zero exit code."""
+        resp, result = self._execute("/bin/false", run="true")
+        output = json.loads(result.decode('utf-8'))
+        self.assertEqual(200, resp.status)
+        # k8s returns 1; assert non-zero rather than pinning the exact value.
+        self.assertNotEqual(0, output.get("exit_code"))
+
+    @decorators.attr(type="smoke")
+    def test_exec_multiline_output(self):
+        """Multi-line stdout is captured intact and in order."""
+        resp, result = self._execute(
+            "/bin/sh -c 'echo line1; echo line2; echo line3'", run="true"
+        )
+        output = json.loads(result.decode('utf-8'))
+        self.assertEqual(200, resp.status)
+        self.assertEqual(0, output.get("exit_code"))
+        body = output.get("output", "")
+        for line in ("line1", "line2", "line3"):
+            self.assertIn(line, body)
+        self.assertLess(body.index("line1"), body.index("line3"))
+
+    @decorators.attr(type="smoke")
+    def test_exec_binary_not_found(self):
+        """A missing binary reports the driver's create-time error contract."""
+        resp, result = self._execute("/nonexistent-binary-xyz", run="true")
+        output = json.loads(result.decode('utf-8'))
+        self.assertEqual(200, resp.status)
+        # k8s driver: exit_code -1, "Malformed command, or binary not found ..."
+        self.assertEqual(-1, output.get("exit_code"))
+        self.assertIn("not found", output.get("output", "").lower())
+
+    @decorators.attr(type="smoke")
+    def test_exec_interactive_handshake(self):
+        """Interactive exec returns a well-formed websocket handshake.
+
+        The actual stdin/stdout flows over the websocket; here we only
+        assert the handshake the REST call returns. Note the auth `token` is
+        folded into `proxy_url` and is NOT a top-level field
+        (see zun/compute/api.py).
+        """
+        resp, result = self._execute(
+            "echo hello", interactive="true", run="false"
+        )
+        self.assertEqual(200, resp.status)
+        handshake_result = json.loads(result.decode('utf-8'))
+
+        # k8s exec handle: os.urandom(32).hex() -> 64 hex chars.
+        self.assertIn("exec_id", handshake_result)
+        self.assertRegex(handshake_result["exec_id"], r"^[0-9a-f]{64}$")
+
+        # proxy_url points at zun-wsproxy and carries token/uuid/exec_id.
+        self.assertIn("proxy_url", handshake_result)
+        proxy_url = handshake_result["proxy_url"]
+        self.assertTrue(proxy_url)
+        self.assertTrue(proxy_url.startswith(("ws://", "wss://")))
+        query = urllib.parse.parse_qs(
+            urllib.parse.urlparse(proxy_url).query
+        )
+        self.assertIn("token", query)
+        self.assertTrue(query["token"][0])
+        self.assertEqual(self.container.uuid, query["uuid"][0])
+        self.assertEqual(handshake_result["exec_id"], query["exec_id"][0])
+
+        # For interactive exec the command is deferred until a client connects
+        # to the websocket, so output and exit_code are null.
+        self.assertIsNone(handshake_result.get("output"))
+        self.assertIsNone(handshake_result.get("exit_code"))
 
     @decorators.attr(type="smoke")
     def test_download_archive(self):
