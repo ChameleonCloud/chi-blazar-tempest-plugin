@@ -65,16 +65,21 @@ class TestReservationContainerApi(ContainerApiBase):
         output = logs.decode('utf-8')
         self.assertIn('hello-from-container', output)
 
+    def _execute(self, command, **params):
+        """POST to the container execute endpoint and return (resp, raw body).
+
+        ``command`` is the command to run; extra query params (e.g. run="true"
+        or interactive="true") are passed through verbatim.
+        """
+        query = {"command": command, **params}
+        query_string = urllib.parse.urlencode(query)
+        url = f"/containers/{self.container.uuid}/execute?{query_string}"
+        return self.container_client.post(url, body=None)
+
     @decorators.attr(type="smoke")
     def test_exec_in_container(self):
         """Test executing a command in a container."""
-        query_params = {
-            "command": "echo exec-in-container",
-            "run": "true",
-        }
-        query_string = urllib.parse.urlencode(query_params)
-        url = f"/containers/{self.container.uuid}/execute?{query_string}"
-        resp, result = self.container_client.post(url, body=None)
+        resp, result = self._execute("echo exec-in-container")
         output = json.loads(result.decode('utf-8'))
         self.assertEqual(200, resp.status)
         self.assertIn("exec-in-container", output.get("output"))
