@@ -119,6 +119,43 @@ class TestReservationContainerApi(ContainerApiBase):
         self.assertIn("not found", output.get("output", "").lower())
 
     @decorators.attr(type="smoke")
+    def test_exec_interactive_handshake(self):
+        """Interactive exec returns a well-formed websocket handshake.
+
+        The actual stdin/stdout flows over the websocket; here we only
+        assert the handshake the REST call returns. Note the auth `token` is
+        folded into `proxy_url` and is NOT a top-level field
+        (see zun/compute/api.py).
+        """
+        resp, result = self._execute(
+            "echo hello", interactive="true", run="false"
+        )
+        self.assertEqual(200, resp.status)
+        handshake_result = json.loads(result.decode('utf-8'))
+
+        # k8s exec handle: os.urandom(32).hex() -> 64 hex chars.
+        self.assertIn("exec_id", handshake_result)
+        self.assertRegex(handshake_result["exec_id"], r"^[0-9a-f]{64}$")
+
+        # proxy_url points at zun-wsproxy and carries token/uuid/exec_id.
+        self.assertIn("proxy_url", handshake_result)
+        proxy_url = handshake_result["proxy_url"]
+        self.assertTrue(proxy_url)
+        self.assertTrue(proxy_url.startswith(("ws://", "wss://")))
+        query = urllib.parse.parse_qs(
+            urllib.parse.urlparse(proxy_url).query
+        )
+        self.assertIn("token", query)
+        self.assertTrue(query["token"][0])
+        self.assertEqual(self.container.uuid, query["uuid"][0])
+        self.assertEqual(handshake_result["exec_id"], query["exec_id"][0])
+
+        # For interactive exec the command is deferred until a client connects
+        # to the websocket, so output and exit_code are null.
+        self.assertIsNone(handshake_result.get("output"))
+        self.assertIsNone(handshake_result.get("exit_code"))
+
+    @decorators.attr(type="smoke")
     def test_download_archive(self):
         """Test downloading an archive from a container."""
         query_params = urllib.parse.urlencode({"path": f"/etc"})
