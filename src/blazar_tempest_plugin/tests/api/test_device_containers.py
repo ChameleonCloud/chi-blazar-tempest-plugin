@@ -86,6 +86,39 @@ class TestReservationContainerApi(ContainerApiBase):
         self.assertEqual(0, output.get("exit_code"))
 
     @decorators.attr(type="smoke")
+    def test_exec_nonzero_exit_code(self):
+        """A failing command must report a non-zero exit code."""
+        resp, result = self._execute("/bin/false", run="true")
+        output = json.loads(result.decode('utf-8'))
+        self.assertEqual(200, resp.status)
+        # k8s returns 1; assert non-zero rather than pinning the exact value.
+        self.assertNotEqual(0, output.get("exit_code"))
+
+    @decorators.attr(type="smoke")
+    def test_exec_multiline_output(self):
+        """Multi-line stdout is captured intact and in order."""
+        resp, result = self._execute(
+            "/bin/sh -c 'echo line1; echo line2; echo line3'", run="true"
+        )
+        output = json.loads(result.decode('utf-8'))
+        self.assertEqual(200, resp.status)
+        self.assertEqual(0, output.get("exit_code"))
+        body = output.get("output", "")
+        for line in ("line1", "line2", "line3"):
+            self.assertIn(line, body)
+        self.assertLess(body.index("line1"), body.index("line3"))
+
+    @decorators.attr(type="smoke")
+    def test_exec_binary_not_found(self):
+        """A missing binary reports the driver's create-time error contract."""
+        resp, result = self._execute("/nonexistent-binary-xyz", run="true")
+        output = json.loads(result.decode('utf-8'))
+        self.assertEqual(200, resp.status)
+        # k8s driver: exit_code -1, "Malformed command, or binary not found ..."
+        self.assertEqual(-1, output.get("exit_code"))
+        self.assertIn("not found", output.get("output", "").lower())
+
+    @decorators.attr(type="smoke")
     def test_download_archive(self):
         """Test downloading an archive from a container."""
         query_params = urllib.parse.urlencode({"path": f"/etc"})
