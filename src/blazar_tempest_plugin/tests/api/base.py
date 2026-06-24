@@ -130,12 +130,14 @@ class ContainerApiBase(ReservationApiTest):
 
         return final_lease
 
-    def _create_reserved_container(self, name, hints, desired_state="Running"):
+    def _create_reserved_container(
+        self, name, hints, desired_state="Running", sleep=60
+    ):
         _, container = self._create_container(
             desired_state=desired_state,
             name=data_utils.rand_name(name),
             hints=hints,
             image="busybox",
-            command="/bin/sh -c 'echo hello-from-container && sleep 60'",
+            command=f"/bin/sh -c 'echo hello-from-container && sleep {sleep}'",
         )
         return container

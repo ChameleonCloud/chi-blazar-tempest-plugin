@@ -8,6 +8,7 @@ dependencies = [
     "tempest",
     "zun-tempest-plugin",
     "keystoneauth1",
+    "websocket-client",
 ]
 
 [project.entry-points."tempest.test_plugins"]
