@@ -109,11 +109,6 @@ ImageGroup = [
     cfg.StrOpt(
         "cc_image_tests_skip_test_regex",
         default='',
-        help=("Regex for test method names to skip during image tests (e.g. verify_rclone_and_object_store|verify_openrc)."),
-    ),
-    cfg.StrOpt(
-        "cc_image_tests_openrc_path",
-        default="/home/cc/openrc",
-        help="Path to the openrc file on the server used in image tests.",
+        help=("Regex for test method names to skip during image tests (e.g. verify_rclone_and_object_store)."),
     ),
 ]
