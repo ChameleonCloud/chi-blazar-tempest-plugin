@@ -32,24 +32,15 @@ def get_server_floating_ip(server):
     return None
 
 
-def wait_for_remote_file(remote, path, timeout=30, interval=1):
-    """Wait for a file to exist on a remote system via SSH."""
-
-    start = time.time()
-    while time.time() - start < timeout:
-        output = remote.exec_command(f'test -f {path} && echo FOUND || echo MISSING')
-        if "FOUND" in output:
-            return True
-        time.sleep(interval)
-    return False
-
-
 def should_skip(check_name, check_regex):
     """
     Check if a test should be skipped based on the configuration.
 
-    For example, on KVM we want to skip 2 tests:
-    cc_image_tests_skip_test_regex = verify_rclone_and_object_store|verify_openrc
+    For example, on KVM we want to skip 1 test:
+    cc_image_tests_skip_test_regex = verify_rclone_and_object_store
+
+    Multiple tests can be skipped using alternation:
+    cc_image_tests_skip_test_regex = verify_rclone_and_object_store|verify_cloud_init
     """
     if check_regex and re.fullmatch(check_regex, check_name):
         return True

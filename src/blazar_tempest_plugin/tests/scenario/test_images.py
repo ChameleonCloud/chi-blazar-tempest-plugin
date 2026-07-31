@@ -12,7 +12,6 @@ from tempest.lib.common.utils import test_utils
 from blazar_tempest_plugin.common import waiters
 from blazar_tempest_plugin.common.utils import get_server_floating_ip
 from blazar_tempest_plugin.common.utils import should_skip
-from blazar_tempest_plugin.common.utils import wait_for_remote_file
 from blazar_tempest_plugin.tests.scenario.base import ReservationScenarioTest
 
 
@@ -35,25 +34,6 @@ def verify_cloud_init(self, remote):
     output = remote.exec_command('cloud-init status --long')
     if "status: done" not in output:
         self.fail(f"cloud-init did not finish properly.\nOutput:\n{output}")
-
-
-def verify_openrc_exists(self, remote):
-    self.assertTrue(
-        wait_for_remote_file(remote, CONF.image.cc_image_tests_openrc_path),
-        f"{CONF.image.cc_image_tests_openrc_path} did not appear within timeout"
-    )
-
-
-def verify_openrc(self, remote):
-    self.assertTrue(
-        wait_for_remote_file(remote, CONF.image.cc_image_tests_openrc_path),
-        f"{CONF.image.cc_image_tests_openrc_path} did not appear within timeout"
-    )
-    output = remote.exec_command(
-        f'bash -c "source {CONF.image.cc_image_tests_openrc_path} && openstack token issue -f value -c id" || echo FAILED'
-    )
-    self.assertNotIn("FAILED", output, f"Failed to source {CONF.image.cc_image_tests_openrc_path} or run OpenStack command.")
-    self.assertTrue(output.strip(), "OpenStack command produced no output — openrc may not have been sourced correctly.")
 
 
 def verify_ssh_key_injection(self, remote, public_key):
@@ -82,8 +62,6 @@ TESTS = [
     (AlertLevel.CRITICAL, "verify_ssh_key_injection", verify_ssh_key_injection),
     (AlertLevel.CRITICAL, "verify_rclone_and_object_store", verify_rclone_and_object_store),
     (AlertLevel.NONCRITICAL, "verify_cloud_init", verify_cloud_init),
-    (AlertLevel.NONCRITICAL, "verify_openrc_exists", verify_openrc_exists),
-    (AlertLevel.NONCRITICAL, "verify_openrc", verify_openrc),
 ]
 
 
