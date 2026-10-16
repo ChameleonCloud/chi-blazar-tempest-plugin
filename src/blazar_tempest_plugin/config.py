@@ -44,6 +44,11 @@ ReservationGroup = [
         "reservable_arm_node_type",
         help="Node type to use for reservable ARM hosts",
     ),
+    cfg.StrOpt(
+        "device_machine_name",
+        default="raspberrypi4-64",
+        help="Machine name to use for reservable devices",
+    ),
     cfg.BoolOpt(
         "reservation_required",
         default=True,

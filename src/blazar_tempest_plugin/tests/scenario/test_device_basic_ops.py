@@ -67,7 +67,7 @@ class ReservationZunTest(ReservationScenarioTest):
             "resource_type": "device",
             "min": "1",
             "max": "1",
-            "resource_properties": '["==", "$machine_name", "raspberrypi4-64"]',
+            "resource_properties": f'["==", "$machine_name", "{CONF.reservation.device_machine_name}"]',
         }
 
         end_date = utils.time_offset_to_blazar_string(hours=1)
