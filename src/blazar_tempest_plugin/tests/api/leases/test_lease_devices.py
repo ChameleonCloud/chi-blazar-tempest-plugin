@@ -1,12 +1,15 @@
 from datetime import datetime
 from datetime import timedelta
 
+from tempest import config
 from tempest.lib import exceptions
 from tempest.lib import decorators
 
 from blazar_tempest_plugin.common import utils
 from blazar_tempest_plugin.common import waiters
 from blazar_tempest_plugin.tests.api.base import ContainerApiBase
+
+CONF = config.CONF
 
 
 class TestLeaseContainers(ContainerApiBase):
@@ -82,7 +85,7 @@ class TestLeaseContainers(ContainerApiBase):
             "resource_type": "device",
             "min": "1",
             "max": "1",
-            "resource_properties": f'["and", ["==", "$machine_name", "raspberrypi4-64"], ["==", "$uid", "{device_id}"]]',
+            "resource_properties": f'["and", ["==", "$machine_name", "{CONF.reservation.device_machine_name}"], ["==", "$uid", "{device_id}"]]',
         }
 
         exc = self.assertRaises(

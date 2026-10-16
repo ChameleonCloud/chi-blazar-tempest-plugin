@@ -115,7 +115,7 @@ class ContainerApiBase(ReservationApiTest):
             "resource_type": "device",
             "min": "1",
             "max": "1",
-            "resource_properties": '["==", "$machine_name", "raspberrypi4-64"]',
+            "resource_properties": f'["==", "$machine_name", "{CONF.reservation.device_machine_name}"]',
         }
 
         lease = self.create_test_lease(
