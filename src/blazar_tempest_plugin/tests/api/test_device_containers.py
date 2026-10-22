@@ -19,7 +19,13 @@ class TestReservationContainerApi(ContainerApiBase):
         super(TestReservationContainerApi, self).setUp()
         self.lease = self._reserve_device()
         self.hints = {"reservation": utils.get_device_reservation_from_lease(self.lease)}
-        self.container = self._create_reserved_container("reservation-container", self.hints)
+        # The container must keep running for the whole test. With the
+        # default sleep of 60 s it can exit mid-test, and Kubernetes restarts
+        # it with a fresh filesystem, so test_upload_archive could not read
+        # back the file it uploaded.
+        self.container = self._create_reserved_container(
+            "reservation-container", self.hints, sleep=600
+        )
         self.minimum_archive_api_microversion = "1.25"
 
     @decorators.attr(type="smoke")
@@ -206,10 +212,13 @@ class TestReservationContainerApi(ContainerApiBase):
         # base class for deleting containers, but we need to bump it for archive
         # support. it may be better to drop the version only for delete instead
         set_container_service_api_microversion(self.minimum_archive_api_microversion)
-        resp, _ = self.container_client.post(put_url, body=body, headers=header)
-        set_container_service_api_microversion(self.request_microversion)
-
+        try:
+            resp, _ = self.container_client.post(put_url, body=body, headers=header)
+        finally:
+            set_container_service_api_microversion(self.request_microversion)
         self.assertEqual(200, resp.status)
 
-        # TODO: we need a way to verify the file was uploaded, all my attempts
-        # thus far have failed, so this is a placeholder to figure it out
+        _, result = self._execute(f"cat /tmp/{file_name}", run="true")
+        output = json.loads(result.decode('utf-8'))
+        self.assertEqual(0, output.get("exit_code"))
+        self.assertEqual(file_data.decode('utf-8'), output.get("output"))
